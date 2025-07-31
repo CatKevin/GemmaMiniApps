@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -95,28 +96,36 @@ class ChatPage extends HookWidget {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: FadeTransition(
-          opacity: fadeController,
-          child: const Text(
-            'GEMMA',
-            style: TextStyle(
-              letterSpacing: 4,
-              fontWeight: FontWeight.w200,
-            ),
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppTheme.pureBlack.withOpacity(0.8),
-                AppTheme.pureBlack.withOpacity(0.0),
-              ],
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: AppBar(
+              title: FadeTransition(
+                opacity: fadeController,
+                child: const Text(
+                  'GEMMA',
+                  style: TextStyle(
+                    letterSpacing: 4,
+                    fontWeight: FontWeight.w200,
+                  ),
+                ),
+              ),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              flexibleSpace: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppTheme.pureBlack.withOpacity(0.95),
+                      AppTheme.pureBlack.withOpacity(0.7),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -180,7 +189,7 @@ class ChatPage extends HookWidget {
                         top: 100,
                         left: 16,
                         right: 16,
-                        bottom: 16,
+                        bottom: 8, // Reduced bottom padding
                       ),
                       itemCount: messages.value.length + (isTyping.value ? 1 : 0),
                       itemBuilder: (context, index) {
@@ -230,6 +239,7 @@ class ChatPage extends HookWidget {
               child: ChatInput(
                 onSendMessage: sendMessage,
                 enabled: !isTyping.value,
+                showToolbar: false, // Set to true to show toolbar
               ),
             ),
           ],
