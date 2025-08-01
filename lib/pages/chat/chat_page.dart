@@ -2,10 +2,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:get/get.dart';
 import '../../widgets/message_bubble/message_bubble.dart';
 import '../../widgets/chat_input/chat_input.dart';
 import '../../widgets/button_bar/button_bar.dart';
-import '../../utils/theme/app_theme.dart';
+import '../../core/theme/controllers/theme_controller.dart';
+import '../../core/theme/widgets/theme_switcher.dart';
 
 // Message model
 class Message {
@@ -25,6 +27,8 @@ class ChatPage extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeController = ThemeController.to;
+    
     // State management using hooks
     final messages = useState<List<Message>>([
       Message(
@@ -42,10 +46,10 @@ class ChatPage extends HookWidget {
 
     // Animation controllers
     final fadeController = useAnimationController(
-      duration: AppTheme.longAnimation,
+      duration: const Duration(milliseconds: 800),
     );
     final scaleController = useAnimationController(
-      duration: AppTheme.mediumAnimation,
+      duration: const Duration(milliseconds: 400),
     );
 
     // Initialize animations
@@ -74,8 +78,8 @@ class ChatPage extends HookWidget {
           if (scrollController.hasClients) {
             scrollController.animateTo(
               scrollController.position.maxScrollExtent,
-              duration: AppTheme.mediumAnimation,
-              curve: AppTheme.smoothCurve,
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeOutQuart,
             );
           }
         });
@@ -119,40 +123,49 @@ class ChatPage extends HookWidget {
         child: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-            child: AppBar(
-              title: FadeTransition(
-                opacity: fadeController,
-                child: const Text(
-                  'GEMMA',
-                  style: TextStyle(
-                    letterSpacing: 4,
-                    fontWeight: FontWeight.w200,
+            child: Obx(() {
+              final theme = themeController.currentThemeConfig;
+              return AppBar(
+                title: FadeTransition(
+                  opacity: fadeController,
+                  child: const Text(
+                    'GEMMA',
+                    style: TextStyle(
+                      letterSpacing: 4,
+                      fontWeight: FontWeight.w200,
+                    ),
                   ),
                 ),
-              ),
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              flexibleSpace: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      AppTheme.pureBlack.withOpacity(0.95),
-                      AppTheme.pureBlack.withOpacity(0.7),
-                    ],
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                actions: const [
+                  Padding(
+                    padding: EdgeInsets.only(right: 16),
+                    child: ThemeSwitcher(),
+                  ),
+                ],
+                flexibleSpace: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        theme.background.withOpacity(0.95),
+                        theme.background.withOpacity(0.7),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ),
+              );
+            }),
           ),
         ),
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
-        ),
-        child: Column(
+      body: Obx(() {
+        final theme = themeController.currentThemeConfig;
+        return Container(
+          color: theme.background,
+          child: Column(
           children: [
             // Message list
             Expanded(
@@ -161,7 +174,7 @@ class ChatPage extends HookWidget {
                       child: ScaleTransition(
                         scale: CurvedAnimation(
                           parent: scaleController,
-                          curve: AppTheme.bounceCurve,
+                          curve: Curves.elasticOut,
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -172,29 +185,35 @@ class ChatPage extends HookWidget {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: AppTheme.pureWhite.withOpacity(0.2),
+                                  color: theme.onBackground.withOpacity(0.2),
                                   width: 1,
                                 ),
-                                boxShadow: AppTheme.glowShadow,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: theme.glowColor.withOpacity(0.1),
+                                    blurRadius: 20,
+                                    spreadRadius: -5,
+                                  ),
+                                ],
                               ),
                               child: Icon(
                                 Icons.auto_awesome,
                                 size: 40,
-                                color: AppTheme.pureWhite.withOpacity(0.8),
+                                color: theme.onBackground.withOpacity(0.8),
                               ),
                             ),
                             const SizedBox(height: 24),
                             Text(
                               'Begin your journey',
-                              style: AppTheme.headline2.copyWith(
-                                color: AppTheme.pureWhite.withOpacity(0.9),
+                              style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                                color: theme.onBackground.withOpacity(0.9),
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               'Type a message to start',
-                              style: AppTheme.bodyText2.copyWith(
-                                color: AppTheme.lightGray,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: theme.onBackground.withOpacity(0.5),
                               ),
                             ),
                           ],
@@ -215,9 +234,9 @@ class ChatPage extends HookWidget {
                         // Show typing indicator
                         if (isTyping.value && index == messages.value.length) {
                           return TweenAnimationBuilder<double>(
-                            duration: AppTheme.mediumAnimation,
+                            duration: const Duration(milliseconds: 400),
                             tween: Tween(begin: 0.0, end: 1.0),
-                            curve: AppTheme.smoothCurve,
+                            curve: Curves.easeOutQuart,
                             builder: (context, value, child) {
                               return Transform.scale(
                                 scale: value,
@@ -233,9 +252,9 @@ class ChatPage extends HookWidget {
 
                         final message = messages.value[index];
                         return TweenAnimationBuilder<double>(
-                          duration: AppTheme.mediumAnimation,
+                          duration: const Duration(milliseconds: 400),
                           tween: Tween(begin: 0.0, end: 1.0),
-                          curve: AppTheme.smoothCurve,
+                          curve: Curves.easeOutQuart,
                           builder: (context, value, child) {
                             return Transform.translate(
                               offset: Offset(0, 20 * (1 - value)),
@@ -278,13 +297,13 @@ class ChatPage extends HookWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          AppTheme.pureBlack.withOpacity(0.7),
-                          AppTheme.pureBlack.withOpacity(0.95),
+                          theme.background.withOpacity(0.7),
+                          theme.background.withOpacity(0.95),
                         ],
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.pureWhite.withOpacity(0.05),
+                          color: theme.shadowColor.withOpacity(0.05),
                           blurRadius: 20,
                           offset: const Offset(0, -2),
                           spreadRadius: -5,
@@ -303,7 +322,8 @@ class ChatPage extends HookWidget {
             ),
           ],
         ),
-      ),
+      );
+    }),
     );
   }
 }

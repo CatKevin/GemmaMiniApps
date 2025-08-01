@@ -2,8 +2,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:get/get.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import '../../utils/theme/app_theme.dart';
+import '../../core/theme/controllers/theme_controller.dart';
 
 class ChatInput extends HookWidget {
   final Function(String) onSendMessage;
@@ -21,6 +22,7 @@ class ChatInput extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeController = ThemeController.to;
     final textController = useTextEditingController();
     final focusNode = useFocusNode();
     final isEmpty = useState(true);
@@ -125,47 +127,49 @@ class ChatInput extends HookWidget {
               color: Colors.transparent,
             ),
             child: SafeArea(
-        top: false,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
+              top: false,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
               // Main input container
               Expanded(
-                child: AnimatedBuilder(
-                  animation: Listenable.merge([
-                    focusAnimationController,
-                    breathingController,
-                    scaleController,
-                  ]),
-                  builder: (context, child) {
-                    final focusProgress = focusAnimationController.value;
-                    final breathingValue = breathingController.value;
-                    final scale = scaleController.value;
+                child: Obx(() {
+                  final theme = themeController.currentThemeConfig;
+                  
+                  return AnimatedBuilder(
+                    animation: Listenable.merge([
+                      focusAnimationController,
+                      breathingController,
+                      scaleController,
+                    ]),
+                    builder: (context, child) {
+                      final breathingValue = breathingController.value;
+                      final scale = scaleController.value;
 
-                    return Transform.scale(
-                      scale: scale,
-                      child: Container(
+                      return Transform.scale(
+                        scale: scale,
+                        child: Container(
                       constraints: const BoxConstraints(
                         minHeight: 52,
                         maxHeight: 120,
                       ),
                       decoration: BoxDecoration(
-                        color: AppTheme.pureBlack,
+                        color: theme.inputBackground,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: AppTheme.pureWhite.withOpacity(
+                          color: theme.inputBorder.withOpacity(
                             isFocused.value
-                                ? 0.3 + (0.2 * focusProgress) + (0.1 * breathingValue)
-                                : 0.2,
+                                ? theme.borderOpacityFocused + (0.1 * breathingValue)
+                                : theme.borderOpacity,
                           ),
                           width: 1,
                         ),
                         boxShadow: isFocused.value
                             ? [
                                 BoxShadow(
-                                  color: AppTheme.pureWhite.withOpacity(0.05),
+                                  color: theme.glowColor.withOpacity(0.05),
                                   blurRadius: 24,
                                   spreadRadius: -10,
                                 ),
@@ -183,9 +187,9 @@ class ChatInput extends HookWidget {
                             minLines: 1,
                             keyboardType: TextInputType.multiline,
                             textInputAction: TextInputAction.send,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
-                              color: AppTheme.pureWhite,
+                              color: theme.inputText,
                               fontWeight: FontWeight.w400,
                               height: 1.5,
                               letterSpacing: -0.2,
@@ -194,8 +198,8 @@ class ChatInput extends HookWidget {
                               hintText: 'Message',
                               hintStyle: TextStyle(
                                 fontSize: 16,
-                                color: AppTheme.lightGray.withOpacity(
-                                  isFocused.value ? 0.7 : 0.5,
+                                color: theme.inputHint.withOpacity(
+                                  isFocused.value ? 0.7 : theme.hintOpacity,
                                 ),
                                 fontWeight: FontWeight.w400,
                                 letterSpacing: -0.2,
@@ -229,9 +233,9 @@ class ChatInput extends HookWidget {
                                   duration: const Duration(milliseconds: 200),
                                   child: Text(
                                     '${characterCount.value}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 11,
-                                      color: AppTheme.lightGray,
+                                      color: theme.inputHint,
                                       fontFamily: 'SF Mono',
                                       letterSpacing: 0.5,
                                     ),
@@ -243,51 +247,55 @@ class ChatInput extends HookWidget {
                       ),
                     ));
                   },
-                ),
+                  );
+                }),
               ),
 
               const SizedBox(width: 12),
 
               // Send button - Floating Pearl Design
-              GestureDetector(
-                onTapDown: (_) {
-                  if (!isEmpty.value && enabled) {
-                    isPressed.value = true;
-                    sendButtonScaleController.forward();
-                  }
-                },
-                onTapUp: (_) {
-                  if (!isEmpty.value && enabled) {
+              Obx(() {
+                final theme = themeController.currentThemeConfig;
+                
+                return GestureDetector(
+                  onTapDown: (_) {
+                    if (!isEmpty.value && enabled) {
+                      isPressed.value = true;
+                      sendButtonScaleController.forward();
+                    }
+                  },
+                  onTapUp: (_) {
+                    if (!isEmpty.value && enabled) {
+                      isPressed.value = false;
+                      handleSend();
+                    }
+                  },
+                  onTapCancel: () {
                     isPressed.value = false;
-                    handleSend();
-                  }
-                },
-                onTapCancel: () {
-                  isPressed.value = false;
-                  sendButtonScaleController.reverse();
-                },
-                child: AnimatedBuilder(
-                  animation: sendButtonScaleController,
-                  builder: (context, child) {
-                    final scale = 1.0 - (0.1 * sendButtonScaleController.value);
+                    sendButtonScaleController.reverse();
+                  },
+                  child: AnimatedBuilder(
+                    animation: sendButtonScaleController,
+                    builder: (context, child) {
+                      final scale = 1.0 - (0.1 * sendButtonScaleController.value);
 
-                    return Transform.scale(
-                      scale: scale,
-                      child: AnimatedContainer(
+                      return Transform.scale(
+                        scale: scale,
+                        child: AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: isEmpty.value || !enabled
-                              ? AppTheme.pureBlack
+                              ? theme.buttonUnselected
                               : isLoading 
-                                  ? AppTheme.darkGray 
-                                  : AppTheme.pureWhite,
+                                  ? theme.surface 
+                                  : theme.buttonSelected,
                           border: isEmpty.value || !enabled
                               ? Border.all(
-                                  color: AppTheme.pureWhite.withOpacity(
-                                    isFocused.value ? 0.25 : 0.2
+                                  color: theme.buttonBorder.withOpacity(
+                                    isFocused.value ? 0.25 : theme.borderOpacity
                                   ),
                                   width: 1,
                                 )
@@ -297,7 +305,7 @@ class ChatInput extends HookWidget {
                               : [
                                   // Elevation shadow
                                   BoxShadow(
-                                    color: AppTheme.pureWhite.withOpacity(
+                                    color: theme.shadowColor.withOpacity(
                                       isLoading ? 0.1 : 0.2
                                     ),
                                     blurRadius: 16,
@@ -307,8 +315,7 @@ class ChatInput extends HookWidget {
                                   // Glow effect
                                   if (isPressed.value || isLoading)
                                     BoxShadow(
-                                      color:
-                                          AppTheme.pureWhite.withOpacity(0.4),
+                                      color: theme.glowColor.withOpacity(0.4),
                                       blurRadius: 24,
                                       spreadRadius: -8,
                                     ),
@@ -320,7 +327,7 @@ class ChatInput extends HookWidget {
                             // Loading animation
                             if (isLoading)
                               LoadingAnimationWidget.staggeredDotsWave(
-                                color: AppTheme.pureWhite,
+                                color: theme.onPrimary,
                                 size: 20,
                               ),
                             // Icon with fade transition
@@ -346,8 +353,8 @@ class ChatInput extends HookWidget {
                                       key: ValueKey('arrow-${isEmpty.value}'),
                                       size: 20,
                                       color: isEmpty.value || !enabled
-                                          ? AppTheme.lightGray.withOpacity(0.5)
-                                          : AppTheme.pureBlack,
+                                          ? theme.inputHint.withOpacity(theme.iconOpacity)
+                                          : theme.onPrimary,
                                     ),
                             ),
                           ],
@@ -356,14 +363,15 @@ class ChatInput extends HookWidget {
                     );
                   },
                 ),
-              ),
-            ],
+              );
+            }),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-        );
-      },
     );
-  }
+  },
+);
+}
 }

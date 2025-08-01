@@ -1,19 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'pages/routes.dart';
-import 'utils/theme/app_theme.dart';
+import 'core/theme/controllers/theme_controller.dart';
 
 void main() {
-  // Set system UI overlay style
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Colors.black,
-      systemNavigationBarIconBrightness: Brightness.light,
-    ),
-  );
+  // Initialize theme controller
+  Get.put(ThemeController());
   
   runApp(const MyApp());
 }
@@ -23,16 +15,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
+    final themeController = ThemeController.to;
+    
+    return Obx(() => GetMaterialApp(
       title: 'Gemma Mini Apps',
-      theme: AppTheme.darkTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.dark,
+      theme: themeController.theme,
+      darkTheme: themeController.theme,
+      themeMode: themeController.materialThemeMode,
       // Route configuration
       initialRoute: AppPages.initial,
       getPages: AppPages.routes,
       // Debug banner
       debugShowCheckedModeBanner: false,
-    );
+    ));
   }
 }
