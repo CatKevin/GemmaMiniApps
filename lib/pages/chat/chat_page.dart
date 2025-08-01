@@ -27,14 +27,16 @@ class ChatPage extends HookWidget {
     // State management using hooks
     final messages = useState<List<Message>>([
       Message(
-        text: "Welcome to the future of AI interaction. I'm Gemma, your advanced local assistant.",
+        text:
+            "Welcome to the future of AI interaction. I'm Gemma, your advanced local assistant.",
         isUser: false,
       ),
     ]);
-    
+
     final scrollController = useScrollController();
     final isTyping = useState(false);
-    
+    final scrollOffset = useState(0.0);
+
     // Animation controllers
     final fadeController = useAnimationController(
       duration: AppTheme.longAnimation,
@@ -49,6 +51,18 @@ class ChatPage extends HookWidget {
       scaleController.forward();
       return null;
     }, []);
+
+    // Listen to scroll position
+    useEffect(() {
+      void listener() {
+        if (scrollController.hasClients) {
+          scrollOffset.value = scrollController.offset;
+        }
+      }
+
+      scrollController.addListener(listener);
+      return () => scrollController.removeListener(listener);
+    }, [scrollController]);
 
     // Scroll to bottom when new message is added
     useEffect(() {
@@ -87,7 +101,8 @@ class ChatPage extends HookWidget {
         messages.value = [
           ...messages.value,
           Message(
-            text: "Processing your request with advanced neural networks. This is a placeholder response showcasing the future of local AI processing.",
+            text:
+                "Processing your request with advanced neural networks. This is a placeholder response showcasing the future of local AI processing.",
             isUser: false,
           ),
         ];
@@ -185,13 +200,14 @@ class ChatPage extends HookWidget {
                     )
                   : ListView.builder(
                       controller: scrollController,
-                      padding: const EdgeInsets.only(
-                        top: 100,
+                      padding: EdgeInsets.only(
+                        top: MediaQuery.of(context).padding.top + kToolbarHeight + 20,
                         left: 16,
                         right: 16,
-                        bottom: 8, // Reduced bottom padding
+                        bottom: 8,
                       ),
-                      itemCount: messages.value.length + (isTyping.value ? 1 : 0),
+                      itemCount:
+                          messages.value.length + (isTyping.value ? 1 : 0),
                       itemBuilder: (context, index) {
                         // Show typing indicator
                         if (isTyping.value && index == messages.value.length) {
@@ -233,13 +249,39 @@ class ChatPage extends HookWidget {
                       },
                     ),
             ),
-            // Input area
+            // Input area with glassmorphic effect
             FadeTransition(
               opacity: fadeController,
-              child: ChatInput(
-                onSendMessage: sendMessage,
-                enabled: !isTyping.value,
-                showToolbar: false, // Set to true to show toolbar
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppTheme.pureBlack.withOpacity(0.7),
+                          AppTheme.pureBlack.withOpacity(0.95),
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.pureWhite.withOpacity(0.05),
+                          blurRadius: 20,
+                          offset: const Offset(0, -2),
+                          spreadRadius: -5,
+                        ),
+                      ],
+                    ),
+                    child: ChatInput(
+                      onSendMessage: sendMessage,
+                      enabled: !isTyping.value,
+                      showToolbar: false,
+                      isLoading: isTyping.value,
+                    ),
+                  ),
+                ),
               ),
             ),
           ],

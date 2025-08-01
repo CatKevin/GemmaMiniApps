@@ -2,18 +2,21 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import '../../utils/theme/app_theme.dart';
 
 class ChatInput extends HookWidget {
   final Function(String) onSendMessage;
   final bool enabled;
   final bool showToolbar;
+  final bool isLoading;
 
   const ChatInput({
     super.key,
     required this.onSendMessage,
     this.enabled = true,
     this.showToolbar = false,
+    this.isLoading = false,
   });
 
   @override
@@ -23,27 +26,31 @@ class ChatInput extends HookWidget {
     final isEmpty = useState(true);
     final isFocused = useState(false);
     final characterCount = useState(0);
+    final isPressed = useState(false);
 
     // Animation controllers
-    final glowController = useAnimationController(
-      duration: AppTheme.mediumAnimation,
+    final focusAnimationController = useAnimationController(
+      duration: const Duration(milliseconds: 300),
     );
-    final sendButtonController = useAnimationController(
-      duration: AppTheme.shortAnimation,
+    final sendButtonScaleController = useAnimationController(
+      duration: const Duration(milliseconds: 150),
     );
+    final breathingController = useAnimationController(
+      duration: const Duration(seconds: 3),
+    );
+
+    // Breathing animation for idle state
+    useEffect(() {
+      breathingController.repeat(reverse: true);
+      return null;
+    }, []);
 
     // Listen to text changes
     useEffect(() {
       void listener() {
-        final text = textController.text.trim();
-        isEmpty.value = text.isEmpty;
+        final text = textController.text;
+        isEmpty.value = text.trim().isEmpty;
         characterCount.value = text.length;
-
-        if (!isEmpty.value) {
-          sendButtonController.forward();
-        } else {
-          sendButtonController.reverse();
-        }
       }
 
       textController.addListener(listener);
@@ -55,9 +62,9 @@ class ChatInput extends HookWidget {
       void listener() {
         isFocused.value = focusNode.hasFocus;
         if (focusNode.hasFocus) {
-          glowController.forward();
+          focusAnimationController.forward();
         } else {
-          glowController.reverse();
+          focusAnimationController.reverse();
         }
       }
 
@@ -65,273 +72,257 @@ class ChatInput extends HookWidget {
       return () => focusNode.removeListener(listener);
     }, [focusNode]);
 
-    void handleSend() {
+    void handleSend() async {
       final text = textController.text.trim();
       if (text.isNotEmpty && enabled) {
-        HapticFeedback.lightImpact();
+        // Haptic feedback
+        HapticFeedback.selectionClick();
+
+        // Button animation
+        await sendButtonScaleController.forward();
+        sendButtonScaleController.reverse();
+
+        // Send message
         onSendMessage(text);
         textController.clear();
         isEmpty.value = true;
         characterCount.value = 0;
+
+        // Keep focus
         focusNode.requestFocus();
       }
     }
 
     return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.deepGray.withOpacity(0.95),
-        border: Border(
-          top: BorderSide(
-            color: AppTheme.pureWhite.withOpacity(0.1),
-            width: 0.5,
-          ),
-        ),
+      decoration: const BoxDecoration(
+        color: Colors.transparent,
       ),
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Toolbar area (future implementation)
-            if (showToolbar)
-              Container(
-                height: 48,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    _buildToolButton(
-                      icon: Icons.image_outlined,
-                      label: 'Image',
-                      onTap: () {},
-                    ),
-                    _buildToolButton(
-                      icon: Icons.attach_file_outlined,
-                      label: 'File',
-                      onTap: () {},
-                    ),
-                    _buildToolButton(
-                      icon: Icons.code_outlined,
-                      label: 'Code',
-                      onTap: () {},
-                    ),
-                  ],
-                ),
-              ),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // Main input container
+              Expanded(
+                child: AnimatedBuilder(
+                  animation: Listenable.merge([
+                    focusAnimationController,
+                    breathingController,
+                  ]),
+                  builder: (context, child) {
+                    final focusProgress = focusAnimationController.value;
+                    final breathingValue = breathingController.value;
 
-            // Input area
-            Container(
-              padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  // Text input field
-                  Expanded(
-                    child: AnimatedBuilder(
-                      animation: glowController,
-                      builder: (context, child) {
-                        return Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: AppTheme.pureWhite.withOpacity(
-                                0.1 + (0.2 * glowController.value),
-                              ),
-                              width: 1,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.pureWhite.withOpacity(
-                                  0.05 * glowController.value,
-                                ),
-                                blurRadius: 10,
-                                spreadRadius: -5,
-                              ),
-                            ],
+                    return Container(
+                      constraints: const BoxConstraints(
+                        minHeight: 52,
+                        maxHeight: 120,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.pureBlack,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppTheme.pureWhite.withOpacity(
+                            0.1 +
+                                (0.2 * focusProgress) +
+                                (isFocused.value ? 0 : 0.1 * breathingValue),
                           ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                              child: TextField(
-                                controller: textController,
-                                focusNode: focusNode,
-                                enabled: enabled,
-                                maxLines: null,
-                                minLines: 1,
-                                keyboardType: TextInputType.multiline,
-                                textInputAction: TextInputAction.newline,
-                                style: AppTheme.bodyText1.copyWith(
-                                  color: AppTheme.pureWhite,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: enabled
-                                      ? 'Message Gemma...'
-                                      : 'Processing...',
-                                  hintStyle: AppTheme.bodyText2.copyWith(
-                                    color: AppTheme.lightGray.withOpacity(0.7),
-                                  ),
-                                  border: InputBorder.none,
-                                  filled: true,
-                                  fillColor:
-                                      AppTheme.mediumGray.withOpacity(0.3),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
-                                  suffixIcon: AnimatedOpacity(
-                                    opacity: isFocused.value &&
-                                            characterCount.value > 0
-                                        ? 1.0
-                                        : 0.0,
-                                    duration: AppTheme.shortAnimation,
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(right: 12),
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            '${characterCount.value}',
-                                            style: AppTheme.caption.copyWith(
-                                              color: AppTheme.lightGray
-                                                  .withOpacity(0.7),
-                                              fontSize: 11,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  suffixIconConstraints: const BoxConstraints(
-                                    minWidth: 40,
-                                    minHeight: 0,
-                                  ),
-                                ),
-                                onSubmitted: (_) {
-                                  if (!isEmpty.value) {
-                                    handleSend();
-                                  }
-                                },
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Send button
-                  AnimatedBuilder(
-                    animation: sendButtonController,
-                    builder: (context, child) {
-                      final scale = 0.9 + (0.1 * sendButtonController.value);
-
-                      return Transform.scale(
-                        scale: scale,
-                        child: GestureDetector(
-                          onTapDown: (_) {
-                            if (!isEmpty.value && enabled) {
-                              HapticFeedback.lightImpact();
-                            }
-                          },
-                          onTap: isEmpty.value || !enabled ? null : handleSend,
-                          child: AnimatedContainer(
-                            duration: AppTheme.shortAnimation,
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              gradient: isEmpty.value || !enabled
-                                  ? null
-                                  : LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        AppTheme.pureWhite,
-                                        AppTheme.pureWhite.withOpacity(0.9),
-                                      ],
-                                    ),
-                              color: isEmpty.value || !enabled
-                                  ? AppTheme.mediumGray.withOpacity(0.5)
-                                  : null,
-                              border: isEmpty.value || !enabled
-                                  ? Border.all(
-                                      color:
-                                          AppTheme.lightGray.withOpacity(0.3),
-                                      width: 1,
-                                    )
-                                  : null,
-                              boxShadow: isEmpty.value || !enabled
-                                  ? null
-                                  : [
-                                      BoxShadow(
-                                        color:
-                                            AppTheme.pureWhite.withOpacity(0.2),
-                                        blurRadius: 10,
-                                        spreadRadius: -5,
-                                      ),
-                                    ],
-                            ),
-                            child: Icon(
-                              Icons.arrow_upward_rounded,
-                              size: 20,
-                              color: isEmpty.value || !enabled
-                                  ? AppTheme.lightGray.withOpacity(0.5)
-                                  : AppTheme.pureBlack,
-                            ),
-                          ),
+                          width: 1,
                         ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+                        boxShadow: isFocused.value
+                            ? [
+                                BoxShadow(
+                                  color: AppTheme.pureWhite.withOpacity(0.03),
+                                  blurRadius: 20,
+                                  spreadRadius: -10,
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Stack(
+                        children: [
+                          // Text field
+                          TextField(
+                            controller: textController,
+                            focusNode: focusNode,
+                            enabled: enabled,
+                            maxLines: 5,
+                            minLines: 1,
+                            keyboardType: TextInputType.multiline,
+                            textInputAction: TextInputAction.send,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: AppTheme.pureWhite,
+                              fontWeight: FontWeight.w400,
+                              height: 1.5,
+                              letterSpacing: -0.2,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Message',
+                              hintStyle: TextStyle(
+                                fontSize: 16,
+                                color: AppTheme.lightGray.withOpacity(0.4),
+                                fontWeight: FontWeight.w400,
+                                letterSpacing: -0.2,
+                              ),
+                              border: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              errorBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              focusedErrorBorder: InputBorder.none,
+                              filled: false,
+                              contentPadding: const EdgeInsets.only(
+                                left: 16,
+                                right: 60,
+                                top: 15,
+                                bottom: 15,
+                              ),
+                            ),
+                            onSubmitted: (_) => handleSend(),
+                          ),
 
-  Widget _buildToolButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: AppTheme.pureWhite.withOpacity(0.2),
-                width: 1,
+                          // Character count
+                          if (characterCount.value > 0)
+                            Positioned(
+                              right: 16,
+                              top: 0,
+                              bottom: 0,
+                              child: Center(
+                                child: AnimatedOpacity(
+                                  opacity: isFocused.value ? 0.5 : 0,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: Text(
+                                    '${characterCount.value}',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppTheme.lightGray,
+                                      fontFamily: 'SF Mono',
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  size: 18,
-                  color: AppTheme.pureWhite.withOpacity(0.8),
+
+              const SizedBox(width: 12),
+
+              // Send button - Floating Pearl Design
+              GestureDetector(
+                onTapDown: (_) {
+                  if (!isEmpty.value && enabled) {
+                    isPressed.value = true;
+                    sendButtonScaleController.forward();
+                  }
+                },
+                onTapUp: (_) {
+                  if (!isEmpty.value && enabled) {
+                    isPressed.value = false;
+                    handleSend();
+                  }
+                },
+                onTapCancel: () {
+                  isPressed.value = false;
+                  sendButtonScaleController.reverse();
+                },
+                child: AnimatedBuilder(
+                  animation: sendButtonScaleController,
+                  builder: (context, child) {
+                    final scale = 1.0 - (0.1 * sendButtonScaleController.value);
+
+                    return Transform.scale(
+                      scale: scale,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isEmpty.value || !enabled
+                              ? AppTheme.pureBlack
+                              : isLoading 
+                                  ? AppTheme.darkGray 
+                                  : AppTheme.pureWhite,
+                          border: isEmpty.value || !enabled
+                              ? Border.all(
+                                  color: AppTheme.pureWhite.withOpacity(0.1),
+                                  width: 1,
+                                )
+                              : null,
+                          boxShadow: isEmpty.value || !enabled
+                              ? null
+                              : [
+                                  // Elevation shadow
+                                  BoxShadow(
+                                    color: AppTheme.pureWhite.withOpacity(
+                                      isLoading ? 0.1 : 0.2
+                                    ),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 4),
+                                    spreadRadius: -8,
+                                  ),
+                                  // Glow effect
+                                  if (isPressed.value || isLoading)
+                                    BoxShadow(
+                                      color:
+                                          AppTheme.pureWhite.withOpacity(0.4),
+                                      blurRadius: 24,
+                                      spreadRadius: -8,
+                                    ),
+                                ],
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // Loading animation
+                            if (isLoading)
+                              LoadingAnimationWidget.staggeredDotsWave(
+                                color: AppTheme.pureWhite,
+                                size: 20,
+                              ),
+                            // Icon with fade transition
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              transitionBuilder: (child, animation) {
+                                return FadeTransition(
+                                  opacity: animation,
+                                  child: ScaleTransition(
+                                    scale: animation,
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: isLoading
+                                  ? const SizedBox(
+                                      key: ValueKey('loading'),
+                                      width: 20,
+                                      height: 20,
+                                    )
+                                  : Icon(
+                                      Icons.arrow_upward,
+                                      key: ValueKey('arrow-${isEmpty.value}'),
+                                      size: 20,
+                                      color: isEmpty.value || !enabled
+                                          ? AppTheme.lightGray.withOpacity(0.3)
+                                          : AppTheme.pureBlack,
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: AppTheme.caption.copyWith(
-                    color: AppTheme.pureWhite.withOpacity(0.8),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

@@ -41,6 +41,9 @@ dependencies:
   
   # Navigation and state management
   get: ^4.6.6
+  
+  # Loading animations
+  loading_animation_widget: ^1.3.0
 
 dev_dependencies:
   flutter_test:
