@@ -38,12 +38,34 @@ class ChatInput extends HookWidget {
     final breathingController = useAnimationController(
       duration: const Duration(seconds: 3),
     );
+    final fadeInController = useAnimationController(
+      duration: const Duration(milliseconds: 600),
+    );
+    final scaleController = useAnimationController(
+      duration: const Duration(milliseconds: 300),
+      lowerBound: 0.98,
+      upperBound: 1.0,
+    );
 
-    // Breathing animation for idle state
+    // Initial fade-in animation
     useEffect(() {
-      breathingController.repeat(reverse: true);
+      fadeInController.forward();
+      scaleController.value = 1.0;
       return null;
     }, []);
+
+    // Breathing animation only when focused
+    useEffect(() {
+      if (isFocused.value) {
+        breathingController.repeat(reverse: true);
+        scaleController.forward();
+      } else {
+        breathingController.stop();
+        breathingController.reset();
+        scaleController.reverse();
+      }
+      return null;
+    }, [isFocused.value]);
 
     // Listen to text changes
     useEffect(() {
@@ -93,11 +115,16 @@ class ChatInput extends HookWidget {
       }
     }
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.transparent,
-      ),
-      child: SafeArea(
+    return AnimatedBuilder(
+      animation: fadeInController,
+      builder: (context, child) {
+        return Opacity(
+          opacity: fadeInController.value,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.transparent,
+            ),
+            child: SafeArea(
         top: false,
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -110,12 +137,16 @@ class ChatInput extends HookWidget {
                   animation: Listenable.merge([
                     focusAnimationController,
                     breathingController,
+                    scaleController,
                   ]),
                   builder: (context, child) {
                     final focusProgress = focusAnimationController.value;
                     final breathingValue = breathingController.value;
+                    final scale = scaleController.value;
 
-                    return Container(
+                    return Transform.scale(
+                      scale: scale,
+                      child: Container(
                       constraints: const BoxConstraints(
                         minHeight: 52,
                         maxHeight: 120,
@@ -125,17 +156,17 @@ class ChatInput extends HookWidget {
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: AppTheme.pureWhite.withOpacity(
-                            0.1 +
-                                (0.2 * focusProgress) +
-                                (isFocused.value ? 0 : 0.1 * breathingValue),
+                            isFocused.value
+                                ? 0.3 + (0.2 * focusProgress) + (0.1 * breathingValue)
+                                : 0.2,
                           ),
                           width: 1,
                         ),
                         boxShadow: isFocused.value
                             ? [
                                 BoxShadow(
-                                  color: AppTheme.pureWhite.withOpacity(0.03),
-                                  blurRadius: 20,
+                                  color: AppTheme.pureWhite.withOpacity(0.05),
+                                  blurRadius: 24,
                                   spreadRadius: -10,
                                 ),
                               ]
@@ -163,7 +194,9 @@ class ChatInput extends HookWidget {
                               hintText: 'Message',
                               hintStyle: TextStyle(
                                 fontSize: 16,
-                                color: AppTheme.lightGray.withOpacity(0.4),
+                                color: AppTheme.lightGray.withOpacity(
+                                  isFocused.value ? 0.7 : 0.5,
+                                ),
                                 fontWeight: FontWeight.w400,
                                 letterSpacing: -0.2,
                               ),
@@ -208,7 +241,7 @@ class ChatInput extends HookWidget {
                             ),
                         ],
                       ),
-                    );
+                    ));
                   },
                 ),
               ),
@@ -253,7 +286,9 @@ class ChatInput extends HookWidget {
                                   : AppTheme.pureWhite,
                           border: isEmpty.value || !enabled
                               ? Border.all(
-                                  color: AppTheme.pureWhite.withOpacity(0.1),
+                                  color: AppTheme.pureWhite.withOpacity(
+                                    isFocused.value ? 0.25 : 0.2
+                                  ),
                                   width: 1,
                                 )
                               : null,
@@ -311,7 +346,7 @@ class ChatInput extends HookWidget {
                                       key: ValueKey('arrow-${isEmpty.value}'),
                                       size: 20,
                                       color: isEmpty.value || !enabled
-                                          ? AppTheme.lightGray.withOpacity(0.3)
+                                          ? AppTheme.lightGray.withOpacity(0.5)
                                           : AppTheme.pureBlack,
                                     ),
                             ),
@@ -326,6 +361,9 @@ class ChatInput extends HookWidget {
           ),
         ),
       ),
+    ),
+        );
+      },
     );
   }
 }
