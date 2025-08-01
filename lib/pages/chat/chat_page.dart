@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import '../../widgets/message_bubble/message_bubble.dart';
 import '../../widgets/chat_input/chat_input.dart';
+import '../../widgets/button_bar/button_bar.dart';
 import '../../utils/theme/app_theme.dart';
 
 // Message model
@@ -36,6 +37,8 @@ class ChatPage extends HookWidget {
     final scrollController = useScrollController();
     final isTyping = useState(false);
     final scrollOffset = useState(0.0);
+    final isModelSelected = useState(false);
+    final isMiniAppsSelected = useState(false);
 
     // Animation controllers
     final fadeController = useAnimationController(
@@ -248,6 +251,20 @@ class ChatPage extends HookWidget {
                         );
                       },
                     ),
+            ),
+            // Button bar for mode selection
+            ModeButtonBar(
+              isModelSelected: isModelSelected.value,
+              isMiniAppsSelected: isMiniAppsSelected.value,
+              onModelToggle: () {
+                isModelSelected.value = !isModelSelected.value;
+                HapticFeedback.selectionClick();
+              },
+              onMiniAppsToggle: () {
+                isMiniAppsSelected.value = !isMiniAppsSelected.value;
+                HapticFeedback.selectionClick();
+              },
+              enabled: !isTyping.value,
             ),
             // Input area with glassmorphic effect
             FadeTransition(
