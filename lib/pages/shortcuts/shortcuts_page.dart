@@ -1,4 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:get/get.dart';
 import '../../core/theme/controllers/theme_controller.dart';
@@ -190,14 +193,8 @@ class ShortcutsPage extends HookWidget {
                             ],
                           ),
                         )
-                      : GridView.builder(
-                          padding: const EdgeInsets.all(16),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 1.2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                          ),
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           itemCount: filteredShortcuts.value.length,
                           itemBuilder: (context, index) {
                             final shortcut = filteredShortcuts.value[index];
@@ -212,6 +209,80 @@ class ShortcutsPage extends HookWidget {
                                 // Navigate to runtime
                                 Routes.toShortcutsRuntime(shortcutId: shortcut.id);
                               },
+                              onLongPress: () => _showContextMenu(
+                                context: context,
+                                shortcut: shortcut,
+                                onEdit: () {
+                                  Navigator.of(context).pop();
+                                  Routes.toShortcutsEditor(shortcutId: shortcut.id);
+                                },
+                                onDelete: () async {
+                                  Navigator.of(context).pop();
+                                  
+                                  // Show delete confirmation
+                                  final confirmed = await Get.dialog<bool>(
+                                    AlertDialog(
+                                      title: const Text('Delete Shortcut'),
+                                      content: Text('Are you sure you want to delete "${shortcut.name}"?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Get.back(result: false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Get.back(result: true),
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: theme.error,
+                                          ),
+                                          child: const Text('Delete'),
+                                        ),
+                                      ],
+                                    ),
+                                  ) ?? false;
+                                  
+                                  if (confirmed && storageService.value != null) {
+                                    final success = await storageService.value!.deleteShortcut(shortcut.id);
+                                    if (success) {
+                                      // Reload shortcuts
+                                      final allShortcuts = await storageService.value!.getAllShortcuts();
+                                      shortcuts.value = allShortcuts;
+                                      
+                                      Get.snackbar(
+                                        'Success',
+                                        'Shortcut deleted successfully',
+                                        snackPosition: SnackPosition.BOTTOM,
+                                      );
+                                    }
+                                  }
+                                },
+                                onDuplicate: () async {
+                                  Navigator.of(context).pop();
+                                  
+                                  // Create a duplicate
+                                  final duplicate = shortcut.copyWith(
+                                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                                    name: '${shortcut.name} (Copy)',
+                                    createdAt: DateTime.now(),
+                                    updatedAt: DateTime.now(),
+                                    usageCount: 0,
+                                  );
+                                  
+                                  if (storageService.value != null) {
+                                    final success = await storageService.value!.saveShortcut(duplicate);
+                                    if (success) {
+                                      // Reload shortcuts
+                                      final allShortcuts = await storageService.value!.getAllShortcuts();
+                                      shortcuts.value = allShortcuts;
+                                      
+                                      Get.snackbar(
+                                        'Success',
+                                        'Shortcut duplicated successfully',
+                                        snackPosition: SnackPosition.BOTTOM,
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
                             );
                           },
                         ),
@@ -231,15 +302,155 @@ class ShortcutsPage extends HookWidget {
       ),
     );
   }
+  
+  void _showContextMenu({
+    required BuildContext context,
+    required ShortcutDefinition shortcut,
+    required VoidCallback onEdit,
+    required VoidCallback onDelete,
+    required VoidCallback onDuplicate,
+  }) {
+    final theme = ThemeController.to.currentThemeConfig;
+    
+    // Haptic feedback
+    HapticFeedback.mediumImpact();
+    
+    showCupertinoModalPopup(
+      context: context,
+      builder: (BuildContext context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          margin: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: theme.surface.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header with shortcut info
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: theme.onSurface.withValues(alpha: 0.1),
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: theme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          shortcut.icon.iconData,
+                          size: 24,
+                          color: theme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              shortcut.name,
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: theme.onSurface,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              shortcut.description,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: theme.onSurface.withValues(alpha: 0.6),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Menu options
+                _ContextMenuItem(
+                  icon: Icons.play_circle_outline,
+                  label: 'Run Shortcut',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Routes.toShortcutsRuntime(shortcutId: shortcut.id);
+                  },
+                ),
+                _ContextMenuItem(
+                  icon: Icons.edit_outlined,
+                  label: 'Edit',
+                  onTap: onEdit,
+                ),
+                _ContextMenuItem(
+                  icon: Icons.content_copy_rounded,
+                  label: 'Duplicate',
+                  onTap: onDuplicate,
+                ),
+                _ContextMenuItem(
+                  icon: Icons.share_outlined,
+                  label: 'Share',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    // TODO: Implement share functionality
+                    Get.snackbar(
+                      'Coming Soon',
+                      'Share functionality will be available soon',
+                      snackPosition: SnackPosition.BOTTOM,
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  height: 1,
+                  color: theme.onSurface.withValues(alpha: 0.1),
+                ),
+                const SizedBox(height: 8),
+                _ContextMenuItem(
+                  icon: Icons.delete_outline,
+                  label: 'Delete',
+                  color: theme.error,
+                  onTap: onDelete,
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _ShortcutCard extends StatelessWidget {
   final ShortcutDefinition shortcut;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   
   const _ShortcutCard({
     required this.shortcut,
     required this.onTap,
+    this.onLongPress,
   });
   
   @override
@@ -248,8 +459,10 @@ class _ShortcutCard extends StatelessWidget {
     
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
+      onLongPress: onLongPress,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: theme.surface,
           borderRadius: BorderRadius.circular(16),
@@ -257,51 +470,180 @@ class _ShortcutCard extends StatelessWidget {
             color: theme.onSurface.withValues(alpha: 0.1),
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              shortcut.icon.iconData,
-              size: 32,
-              color: theme.primary,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              shortcut.name,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: theme.onSurface,
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              shortcut.description,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: theme.onSurface.withValues(alpha: 0.6),
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const Spacer(),
-            Row(
-              children: [
-                Icon(
-                  Icons.play_arrow,
-                  size: 16,
-                  color: theme.onSurface.withValues(alpha: 0.5),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Icon container
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: theme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  '${shortcut.usageCount} uses',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: theme.onSurface.withValues(alpha: 0.5),
+                child: Icon(
+                  shortcut.icon.iconData,
+                  size: 28,
+                  color: theme.primary,
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Title and category
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            shortcut.name,
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: theme.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: theme.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            ShortcutCategory.fromString(shortcut.category).displayName,
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: theme.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    // Description
+                    Text(
+                      shortcut.description,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: theme.onSurface.withValues(alpha: 0.7),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    // Stats row
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.play_circle_outline,
+                          size: 14,
+                          color: theme.onSurface.withValues(alpha: 0.4),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${shortcut.usageCount} uses',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: theme.onSurface.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Icon(
+                          Icons.update,
+                          size: 14,
+                          color: theme.onSurface.withValues(alpha: 0.4),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _formatDate(shortcut.updatedAt),
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: theme.onSurface.withValues(alpha: 0.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Arrow icon
+              Icon(
+                Icons.chevron_right,
+                color: theme.onSurface.withValues(alpha: 0.3),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    
+    if (difference.inDays == 0) {
+      return 'Today';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else if (difference.inDays < 30) {
+      return '${(difference.inDays / 7).floor()} weeks ago';
+    } else {
+      return '${(difference.inDays / 30).floor()} months ago';
+    }
+  }
+}
+
+class _ContextMenuItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color? color;
+  
+  const _ContextMenuItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    final theme = ThemeController.to.currentThemeConfig;
+    final effectiveColor = color ?? theme.onSurface;
+    
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 22,
+                color: effectiveColor.withValues(alpha: 0.8),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: effectiveColor,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );

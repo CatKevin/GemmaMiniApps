@@ -5,6 +5,7 @@ import '../../core/theme/controllers/theme_controller.dart';
 import '../../models/shortcuts/models.dart';
 import '../../controllers/shortcuts/editor_controller.dart';
 import '../../widgets/shortcuts/editor/widgets.dart';
+import '../../services/shortcuts/storage_service.dart';
 
 class EditorPage extends HookWidget {
   const EditorPage({super.key});
@@ -12,30 +13,48 @@ class EditorPage extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final themeController = ThemeController.to;
-    final existingShortcut = Get.arguments as ShortcutDefinition?;
+    
+    // Get shortcut ID from arguments
+    final args = Get.arguments as Map<String, dynamic>?;
+    final shortcutId = args?['shortcutId'] as String?;
+    
+    // State management
+    final existingShortcut = useState<ShortcutDefinition?>(null);
+    final isLoadingShortcut = useState(false);
+    final shortcutName = useState('');
+    final shortcutDescription = useState('');
+    final selectedCategory = useState<ShortcutCategory>(ShortcutCategory.other);
+    final selectedIcon = useState<ShortcutIcon>(ShortcutIcon.defaultIcon);
 
     // Initialize controller
     final controller = Get.put(EditorController());
-
-    // State management
-    final shortcutName = useState(existingShortcut?.name ?? '');
-    final shortcutDescription = useState(existingShortcut?.description ?? '');
-    final selectedCategory = useState<ShortcutCategory>(existingShortcut != null
-        ? ShortcutCategory.fromString(existingShortcut.category)
-        : ShortcutCategory.other);
-    final selectedIcon = useState<ShortcutIcon>(
-        existingShortcut?.icon ?? ShortcutIcon.defaultIcon);
 
     // Create text controllers at the top level
     final nameController = useTextEditingController(text: shortcutName.value);
     final descriptionController =
         useTextEditingController(text: shortcutDescription.value);
 
-    // Initialize editor on first build
+    // Load shortcut if editing
     useEffect(() {
-      controller.initializeEditor(existingShortcut);
+      if (shortcutId != null) {
+        isLoadingShortcut.value = true;
+        ShortcutsStorageService.initialize().then((storage) async {
+          final shortcut = await storage.getShortcut(shortcutId);
+          if (shortcut != null) {
+            existingShortcut.value = shortcut;
+            shortcutName.value = shortcut.name;
+            shortcutDescription.value = shortcut.description;
+            selectedCategory.value = ShortcutCategory.fromString(shortcut.category);
+            selectedIcon.value = shortcut.icon;
+            controller.initializeEditor(shortcut);
+          }
+          isLoadingShortcut.value = false;
+        });
+      } else {
+        controller.initializeEditor(null);
+      }
       return null;
-    }, []);
+    }, [shortcutId]);
 
     // Sync text controllers with state
     useEffect(() {
@@ -105,6 +124,18 @@ class EditorPage extends HookWidget {
       );
     }
 
+    // Show loading indicator while loading shortcut
+    if (isLoadingShortcut.value) {
+      return Scaffold(
+        backgroundColor: themeController.currentThemeConfig.background,
+        body: Center(
+          child: CircularProgressIndicator(
+            color: themeController.currentThemeConfig.primary,
+          ),
+        ),
+      );
+    }
+
     return PopScope(
       canPop: !controller.hasUnsavedChanges,
       onPopInvoked: (didPop) async {
@@ -134,7 +165,7 @@ class EditorPage extends HookWidget {
       child: Scaffold(
         appBar: AppBar(
           title:
-              Text(existingShortcut != null ? 'EDIT SHORTCUT' : 'NEW SHORTCUT'),
+              Text(existingShortcut.value != null ? 'EDIT SHORTCUT' : 'NEW SHORTCUT'),
           actions: [
             Obx(() => TextButton(
                   onPressed: controller.hasUnsavedChanges ? handleSave : null,
