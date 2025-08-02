@@ -71,7 +71,7 @@ class AppTheme {
   // Shadows
   static List<BoxShadow> get glowShadow => [
         BoxShadow(
-          color: pureWhite.withOpacity(0.1),
+          color: pureWhite.withValues(alpha: 0.1),
           blurRadius: 20,
           spreadRadius: -5,
         ),
@@ -79,7 +79,7 @@ class AppTheme {
 
   static List<BoxShadow> get deepShadow => [
         BoxShadow(
-          color: pureBlack.withOpacity(0.3),
+          color: pureBlack.withValues(alpha: 0.3),
           blurRadius: 10,
           offset: const Offset(0, 5),
         ),
@@ -87,7 +87,7 @@ class AppTheme {
 
   static List<BoxShadow> get subtleShadow => [
         BoxShadow(
-          color: pureBlack.withOpacity(0.2),
+          color: pureBlack.withValues(alpha: 0.2),
           blurRadius: 5,
           offset: const Offset(0, 2),
         ),
@@ -153,7 +153,7 @@ class AppTheme {
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
-              color: pureWhite.withOpacity(0.5),
+              color: pureWhite.withValues(alpha: 0.5),
               width: 1,
             ),
           ),
@@ -190,10 +190,10 @@ class AppTheme {
     double opacity = 0.1,
   }) =>
       BoxDecoration(
-        color: pureWhite.withOpacity(opacity),
+        color: pureWhite.withValues(alpha: opacity),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: pureWhite.withOpacity(0.2),
+          color: pureWhite.withValues(alpha: 0.2),
           width: 1,
         ),
         boxShadow: glowShadow,

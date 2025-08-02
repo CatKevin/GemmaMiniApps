@@ -60,13 +60,13 @@ class ModeButtonBar extends HookWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          theme.background.withOpacity(0.6),
-                          theme.background.withOpacity(0.8),
+                          theme.background.withValues(alpha: 0.6),
+                          theme.background.withValues(alpha: 0.8),
                         ],
                       ),
                       border: Border(
                         top: BorderSide(
-                          color: theme.onBackground.withOpacity(0.05),
+                          color: theme.onBackground.withValues(alpha: 0.05),
                           width: 0.5,
                         ),
                       ),

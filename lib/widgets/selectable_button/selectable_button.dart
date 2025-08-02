@@ -124,7 +124,7 @@ class SelectableButton extends HookWidget {
                     ),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: theme.buttonBorder.withOpacity(
+                      color: theme.buttonBorder.withValues(alpha:
                         isSelected
                             ? 0.0
                             : theme.borderOpacity +
@@ -137,7 +137,7 @@ class SelectableButton extends HookWidget {
                       // Base shadow
                       if (isSelected)
                         BoxShadow(
-                          color: theme.glowColor.withOpacity(
+                          color: theme.glowColor.withValues(alpha:
                             0.2 + (0.1 * glowIntensity),
                           ),
                           blurRadius: 16 + (8 * glowIntensity),
@@ -146,7 +146,7 @@ class SelectableButton extends HookWidget {
                       // Pressed shadow
                       if (isPressed.value)
                         BoxShadow(
-                          color: theme.glowColor.withOpacity(0.3),
+                          color: theme.glowColor.withValues(alpha: 0.3),
                           blurRadius: 20,
                           spreadRadius: -5,
                         ),
@@ -159,7 +159,7 @@ class SelectableButton extends HookWidget {
                         icon,
                         size: 16,
                         color: Color.lerp(
-                          theme.onBackground.withOpacity(
+                          theme.onBackground.withValues(alpha:
                               theme.iconOpacity + (0.2 * hoverProgress)),
                           theme.onPrimary,
                           selectionProgress,
@@ -173,7 +173,7 @@ class SelectableButton extends HookWidget {
                           fontWeight: FontWeight.w500,
                           letterSpacing: 1.2,
                           color: Color.lerp(
-                            theme.onBackground.withOpacity(
+                            theme.onBackground.withValues(alpha:
                                 theme.iconOpacity + (0.2 * hoverProgress)),
                             theme.onPrimary,
                             selectionProgress,

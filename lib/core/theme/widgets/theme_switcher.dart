@@ -78,7 +78,7 @@ class ThemeSwitcher extends HookWidget {
                     shape: BoxShape.circle,
                     color: Colors.transparent,
                     border: Border.all(
-                      color: theme.onBackground.withOpacity(
+                      color: theme.onBackground.withValues(alpha:
                         isPressed.value ? 0.4 : 0.2,
                       ),
                       width: 1,
@@ -86,7 +86,7 @@ class ThemeSwitcher extends HookWidget {
                     boxShadow: isPressed.value
                         ? [
                             BoxShadow(
-                              color: theme.glowColor.withOpacity(0.2),
+                              color: theme.glowColor.withValues(alpha: 0.2),
                               blurRadius: 16,
                               spreadRadius: -4,
                             ),
@@ -112,7 +112,7 @@ class ThemeSwitcher extends HookWidget {
                           isDark ? Icons.dark_mode : Icons.light_mode,
                           key: ValueKey(isDark),
                           size: 20,
-                          color: theme.onBackground.withOpacity(0.8),
+                          color: theme.onBackground.withValues(alpha: 0.8),
                         ),
                       ),
                       // Rotating glow effect when pressed
@@ -127,10 +127,10 @@ class ThemeSwitcher extends HookWidget {
                               margin: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: theme.glowColor.withOpacity(0.6),
+                                color: theme.glowColor.withValues(alpha: 0.6),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: theme.glowColor.withOpacity(0.4),
+                                    color: theme.glowColor.withValues(alpha: 0.4),
                                     blurRadius: 8,
                                     spreadRadius: 2,
                                   ),

@@ -99,7 +99,7 @@ class MessageBubble extends HookWidget {
                           ? [
                               BoxShadow(
                                 color: theme.glowColor
-                                    .withOpacity(isUser ? 0.3 : 0.1),
+                                    .withValues(alpha: isUser ? 0.3 : 0.1),
                                 blurRadius: 20,
                                 spreadRadius: 2,
                               ),
@@ -107,7 +107,7 @@ class MessageBubble extends HookWidget {
                           : [
                               BoxShadow(
                                 color: theme.shadowColor
-                                    .withOpacity(isUser ? 0.2 : 0.05),
+                                    .withValues(alpha: isUser ? 0.2 : 0.05),
                                 blurRadius: isUser ? 5 : 10,
                                 offset:
                                     isUser ? const Offset(0, 2) : Offset.zero,
@@ -116,7 +116,7 @@ class MessageBubble extends HookWidget {
                             ],
                       border: !isUser
                           ? Border.all(
-                              color: theme.messageBubbleBorder.withOpacity(0.1),
+                              color: theme.messageBubbleBorder.withValues(alpha: 0.1),
                               width: 0.5,
                             )
                           : null,
@@ -129,7 +129,7 @@ class MessageBubble extends HookWidget {
                                 Theme.of(context).textTheme.bodyLarge?.copyWith(
                                       color: isUser
                                           ? theme.onPrimary
-                                          : theme.onSurface.withOpacity(0.9),
+                                          : theme.onSurface.withValues(alpha: 0.9),
                                       height: 1.4,
                                     ),
                           ),
@@ -161,12 +161,12 @@ class MessageBubble extends HookWidget {
               height: 8,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: theme.onSurface.withOpacity(
+                color: theme.onSurface.withValues(alpha:
                   0.3 + (0.7 * _calculateDotOpacity(dotProgress)),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: theme.glowColor.withOpacity(
+                    color: theme.glowColor.withValues(alpha:
                       0.5 * _calculateDotOpacity(dotProgress),
                     ),
                     blurRadius: 8,

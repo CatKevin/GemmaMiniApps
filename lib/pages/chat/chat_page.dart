@@ -8,6 +8,7 @@ import '../../widgets/chat_input/chat_input.dart';
 import '../../widgets/button_bar/button_bar.dart';
 import '../../core/theme/controllers/theme_controller.dart';
 import '../../core/theme/widgets/theme_switcher.dart';
+import '../routes.dart';
 
 // Message model
 class Message {
@@ -150,8 +151,8 @@ class ChatPage extends HookWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        theme.background.withOpacity(0.95),
-                        theme.background.withOpacity(0.7),
+                        theme.background.withValues(alpha: 0.95),
+                        theme.background.withValues(alpha: 0.7),
                       ],
                     ),
                   ),
@@ -185,12 +186,12 @@ class ChatPage extends HookWidget {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: theme.onBackground.withOpacity(0.2),
+                                  color: theme.onBackground.withValues(alpha: 0.2),
                                   width: 1,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: theme.glowColor.withOpacity(0.1),
+                                    color: theme.glowColor.withValues(alpha: 0.1),
                                     blurRadius: 20,
                                     spreadRadius: -5,
                                   ),
@@ -199,21 +200,21 @@ class ChatPage extends HookWidget {
                               child: Icon(
                                 Icons.auto_awesome,
                                 size: 40,
-                                color: theme.onBackground.withOpacity(0.8),
+                                color: theme.onBackground.withValues(alpha: 0.8),
                               ),
                             ),
                             const SizedBox(height: 24),
                             Text(
                               'Begin your journey',
                               style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                                color: theme.onBackground.withOpacity(0.9),
+                                color: theme.onBackground.withValues(alpha: 0.9),
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               'Type a message to start',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: theme.onBackground.withOpacity(0.5),
+                                color: theme.onBackground.withValues(alpha: 0.5),
                               ),
                             ),
                           ],
@@ -282,6 +283,15 @@ class ChatPage extends HookWidget {
               onMiniAppsToggle: () {
                 isMiniAppsSelected.value = !isMiniAppsSelected.value;
                 HapticFeedback.selectionClick();
+                
+                // Navigate to shortcuts when Mini Apps is selected
+                if (isMiniAppsSelected.value) {
+                  Routes.toShortcuts();
+                  // Deselect after navigation
+                  Future.delayed(const Duration(milliseconds: 500), () {
+                    isMiniAppsSelected.value = false;
+                  });
+                }
               },
               enabled: !isTyping.value,
             ),
@@ -297,13 +307,13 @@ class ChatPage extends HookWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          theme.background.withOpacity(0.7),
-                          theme.background.withOpacity(0.95),
+                          theme.background.withValues(alpha: 0.7),
+                          theme.background.withValues(alpha: 0.95),
                         ],
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: theme.shadowColor.withOpacity(0.05),
+                          color: theme.shadowColor.withValues(alpha: 0.05),
                           blurRadius: 20,
                           offset: const Offset(0, -2),
                           spreadRadius: -5,
