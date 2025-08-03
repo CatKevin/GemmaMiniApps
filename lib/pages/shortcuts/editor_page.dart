@@ -7,6 +7,7 @@ import '../../models/shortcuts/models.dart';
 import '../../controllers/shortcuts/editor_controller.dart';
 import '../../widgets/shortcuts/editor/widgets.dart';
 import '../../widgets/shortcuts/editor/variable_definition_section.dart';
+import '../../widgets/shortcuts/editor/draggable_component_card.dart';
 import '../../services/shortcuts/storage_service.dart';
 import '../routes.dart';
 
@@ -293,52 +294,58 @@ class EditorPage extends HookWidget {
                                   padding: EdgeInsets.zero,
                                   itemCount: session.components.length,
                                   onReorder: controller.reorderComponents,
-                                  itemBuilder: (context, index) {
-                          final component = session.components[index];
-                          final template = ComponentTemplateLibrary.getTemplate(
-                            component.component.type,
-                          );
-
-                          return Column(
-                            key: ValueKey(component.id),
-                            children: [
-                              _ComponentListItem(
-                                component: component,
-                                index: index,
-                                totalCount: session.components.length,
-                                onExpand: () {
-                                  controller
-                                      .toggleComponentExpansion(component.id);
-                                },
-                                onDelete: () {
-                                  controller.removeComponent(component.id);
-                                },
-                                onMoveUp: index > 0 ? () {
-                                  HapticFeedback.lightImpact();
-                                  controller.reorderComponents(index, index - 1);
-                                } : null,
-                                onMoveDown: index < session.components.length - 1 ? () {
-                                  HapticFeedback.lightImpact();
-                                  controller.reorderComponents(index, index + 1);
-                                } : null,
-                              ),
-                              if (component.isExpanded && template != null)
-                                ComponentPropertyEditor(
-                                  component: component.component,
-                                  template: template,
-                                  onPropertyChanged: (key, value) {
-                                    controller.updateComponentProperty(
-                                      component.id,
-                                      key,
-                                      value,
+                                  proxyDecorator: (child, index, animation) {
+                                    return AnimatedBuilder(
+                                      animation: animation,
+                                      builder: (context, child) {
+                                        final double animValue = Curves.easeInOut.transform(animation.value);
+                                        final double scale = 1.0 + (animValue * 0.05);
+                                        return Transform.scale(
+                                          scale: scale,
+                                          child: child,
+                                        );
+                                      },
+                                      child: child,
                                     );
                                   },
-                                  availableVariables: variables.value,
-                                  onAddVariable: handleAddVariable,
-                                ),
-                            ],
-                          );
-                        },
+                                  itemBuilder: (context, index) {
+                                    final component = session.components[index];
+                                    final template = ComponentTemplateLibrary.getTemplate(
+                                      component.component.type,
+                                    );
+
+                                    return DraggableComponentCard(
+                                      key: ValueKey(component.id),
+                                      component: component,
+                                      template: template,
+                                      index: index,
+                                      totalCount: session.components.length,
+                                      theme: theme,
+                                      onExpand: () {
+                                        controller.toggleComponentExpansion(component.id);
+                                      },
+                                      onDelete: () {
+                                        controller.removeComponent(component.id);
+                                      },
+                                      onMoveUp: index > 0 ? () {
+                                        HapticFeedback.lightImpact();
+                                        controller.reorderComponents(index, index - 1);
+                                      } : null,
+                                      onMoveDown: index < session.components.length - 1 ? () {
+                                        HapticFeedback.lightImpact();
+                                        controller.reorderComponents(index, index + 1);
+                                      } : null,
+                                      onPropertyChanged: (key, value) {
+                                        controller.updateComponentProperty(
+                                          component.id,
+                                          key,
+                                          value,
+                                        );
+                                      },
+                                      availableVariables: variables.value,
+                                      onAddVariable: handleAddVariable,
+                                    );
+                                  },
                               ),
                           ],
                         ),
@@ -381,210 +388,3 @@ class EditorPage extends HookWidget {
   }
 }
 
-class _ComponentListItem extends StatelessWidget {
-  final EditableComponent component;
-  final int index;
-  final int totalCount;
-  final VoidCallback onExpand;
-  final VoidCallback onDelete;
-  final VoidCallback? onMoveUp;
-  final VoidCallback? onMoveDown;
-
-  const _ComponentListItem({
-    required this.component,
-    required this.index,
-    required this.totalCount,
-    required this.onExpand,
-    required this.onDelete,
-    this.onMoveUp,
-    this.onMoveDown,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = ThemeController.to.currentThemeConfig;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: theme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: theme.onSurface.withValues(alpha: 0.1),
-        ),
-      ),
-      child: Column(
-        children: [
-          ListTile(
-            leading: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.drag_handle,
-                  color: theme.onSurface.withValues(alpha: 0.3),
-                  size: 20,
-                ),
-                const SizedBox(height: 4),
-                Icon(
-                  _getComponentIcon(component.component.type),
-                  color: theme.primary,
-                ),
-              ],
-            ),
-            title: Text(
-              _getComponentTitle(component.component),
-              style: TextStyle(
-                color: theme.onSurface,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            subtitle: Text(
-              _getComponentSubtitle(component.component),
-              style: TextStyle(
-                color: theme.onSurface.withValues(alpha: 0.6),
-                fontSize: 12,
-              ),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Quick move buttons
-                if (onMoveUp != null || onMoveDown != null) ...[
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: theme.background,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        InkWell(
-                          onTap: onMoveUp,
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(8),
-                            bottomLeft: Radius.circular(8),
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            child: Icon(
-                              Icons.arrow_upward,
-                              size: 16,
-                              color: onMoveUp != null 
-                                  ? theme.onSurface.withValues(alpha: 0.6)
-                                  : theme.onSurface.withValues(alpha: 0.2),
-                            ),
-                          ),
-                        ),
-                        Container(
-                          width: 1,
-                          height: 16,
-                          color: theme.onSurface.withValues(alpha: 0.1),
-                        ),
-                        InkWell(
-                          onTap: onMoveDown,
-                          borderRadius: const BorderRadius.only(
-                            topRight: Radius.circular(8),
-                            bottomRight: Radius.circular(8),
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            child: Icon(
-                              Icons.arrow_downward,
-                              size: 16,
-                              color: onMoveDown != null 
-                                  ? theme.onSurface.withValues(alpha: 0.6)
-                                  : theme.onSurface.withValues(alpha: 0.2),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                IconButton(
-                  icon: Icon(
-                    component.isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: theme.onSurface.withValues(alpha: 0.5),
-                  ),
-                  onPressed: onExpand,
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.delete_outline,
-                    color: theme.error,
-                  ),
-                  onPressed: onDelete,
-                ),
-              ],
-            ),
-          ),
-          // Position indicator
-          if (index == 0 || index == totalCount - 1)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      index == 0 ? 'First' : 'Last',
-                      style: TextStyle(
-                        color: theme.primary,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  IconData _getComponentIcon(ComponentType type) {
-    switch (type) {
-      case ComponentType.textInput:
-      case ComponentType.multilineTextInput:
-        return Icons.text_fields;
-      case ComponentType.numberInput:
-        return Icons.numbers;
-      case ComponentType.singleSelect:
-        return Icons.radio_button_checked;
-      case ComponentType.multiSelect:
-        return Icons.check_box;
-      case ComponentType.conditional:
-        return Icons.alt_route;
-      case ComponentType.textTemplate:
-        return Icons.text_snippet;
-      case ComponentType.roleDefinition:
-        return Icons.person;
-      case ComponentType.taskDescription:
-        return Icons.task_alt;
-      default:
-        return Icons.widgets;
-    }
-  }
-
-  String _getComponentTitle(UIComponent component) {
-    return component.properties['label'] ??
-        component.properties['title'] ??
-        component.type.toString().split('.').last;
-  }
-
-  String _getComponentSubtitle(UIComponent component) {
-    if (component.variableBinding != null) {
-      return 'Variable: ${component.variableBinding}';
-    }
-    return component.type.toString().split('.').last;
-  }
-}
