@@ -4,43 +4,77 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:get/get.dart';
 import '../../core/theme/controllers/theme_controller.dart';
 import '../../models/shortcuts/models.dart';
+import '../../services/shortcuts/storage_service.dart';
 import '../routes.dart';
 
 class BasicInfoPage extends HookWidget {
-  final ShortcutDefinition? existingShortcut;
-  
-  const BasicInfoPage({
-    super.key,
-    this.existingShortcut,
-  });
+  const BasicInfoPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     final theme = ThemeController.to.currentThemeConfig;
     
-    // Form controllers
-    final nameController = useTextEditingController(
-      text: existingShortcut?.name ?? '',
-    );
-    final descriptionController = useTextEditingController(
-      text: existingShortcut?.description ?? '',
-    );
+    // Get route arguments
+    final args = Get.arguments as Map<String, dynamic>?;
+    final shortcutId = args?['shortcutId'] as String?;
+    
+    // Loading and data states
+    final isLoading = useState(false);
+    final existingShortcut = useState<ShortcutDefinition?>(null);
+    
+    // Form controllers (initialized with empty values)
+    final nameController = useTextEditingController();
+    final descriptionController = useTextEditingController();
     
     // State
-    final selectedIcon = useState<IconData>(
-      existingShortcut?.icon.iconData ?? Icons.flash_on,
-    );
-    final selectedColor = useState<Color>(
-      existingShortcut?.icon.color ?? theme.primary,
-    );
-    final selectedTags = useState<Set<String>>(
-      existingShortcut != null 
-          ? {existingShortcut!.category} 
-          : {},
-    );
+    final selectedIcon = useState<IconData>(Icons.flash_on);
+    final selectedColor = useState<Color>(theme.primary);
+    final selectedTags = useState<Set<String>>({});
     final showIconPicker = useState(false);
     final showColorPicker = useState(false);
     final nameError = useState<String?>(null);
+    final hasInitialized = useState(false);
+    
+    // Load existing shortcut if editing
+    useEffect(() {
+      if (shortcutId != null && !hasInitialized.value) {
+        isLoading.value = true;
+        ShortcutsStorageService.initialize().then((storage) async {
+          final shortcut = await storage.getShortcut(shortcutId);
+          if (shortcut != null) {
+            existingShortcut.value = shortcut;
+            // Update form fields
+            nameController.text = shortcut.name;
+            descriptionController.text = shortcut.description;
+            selectedIcon.value = shortcut.icon.iconData;
+            selectedColor.value = shortcut.icon.color ?? theme.primary;
+            selectedTags.value = {shortcut.category};
+          } else {
+            Get.snackbar(
+              'Error',
+              'Shortcut not found',
+              backgroundColor: theme.error,
+              colorText: theme.onError,
+            );
+            Get.back();
+          }
+          isLoading.value = false;
+          hasInitialized.value = true;
+        }).catchError((error) {
+          Get.snackbar(
+            'Error',
+            'Failed to load shortcut: $error',
+            backgroundColor: theme.error,
+            colorText: theme.onError,
+          );
+          isLoading.value = false;
+          Get.back();
+        });
+      } else {
+        hasInitialized.value = true;
+      }
+      return null;
+    }, []);
     
     // Available icons
     final availableIcons = [
@@ -216,14 +250,46 @@ class BasicInfoPage extends HookWidget {
       };
       
       // Navigate to editor with basic info
-      if (existingShortcut != null) {
+      if (existingShortcut.value != null) {
         Routes.toShortcutsEditor(
-          shortcutId: existingShortcut!.id,
+          shortcutId: existingShortcut.value!.id,
           basicInfo: basicInfo,
         );
       } else {
         Routes.toShortcutsEditor(basicInfo: basicInfo);
       }
+    }
+    
+    // Show loading state while fetching data
+    if (isLoading.value) {
+      return Scaffold(
+        backgroundColor: theme.background,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Get.back(),
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                color: theme.primary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Loading shortcut...',
+                style: TextStyle(
+                  color: theme.onBackground.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
     
     return Scaffold(
@@ -329,7 +395,7 @@ class BasicInfoPage extends HookWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              existingShortcut != null 
+                              existingShortcut.value != null 
                                   ? 'Edit Shortcut Info' 
                                   : 'Create New Shortcut',
                               style: Theme.of(context).textTheme.displayLarge?.copyWith(

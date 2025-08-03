@@ -149,7 +149,7 @@ class ShortcutIcon {
     return {
       'codePoint': iconData.codePoint,
       'fontFamily': iconData.fontFamily,
-      'color': color?.toARGB32(),
+      'color': color?.value,
     };
   }
 
