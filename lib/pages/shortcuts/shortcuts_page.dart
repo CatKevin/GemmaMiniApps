@@ -385,13 +385,13 @@ class ShortcutsPage extends HookWidget {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: theme.primary.withValues(alpha: 0.1),
+                          color: shortcut.icon.color ?? theme.primary,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
                           shortcut.icon.iconData,
                           size: 24,
-                          color: theme.primary,
+                          color: Colors.white,
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -512,13 +512,13 @@ class _ShortcutCard extends StatelessWidget {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: theme.primary.withValues(alpha: 0.1),
+                  color: shortcut.icon.color ?? theme.primary,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   shortcut.icon.iconData,
                   size: 28,
-                  color: theme.primary,
+                  color: Colors.white,
                 ),
               ),
               const SizedBox(width: 16),
@@ -777,15 +777,12 @@ class _ShortcutSearchDelegate extends SearchDelegate<ShortcutDefinition?> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: theme.surface,
+              color: shortcut.icon.color ?? theme.primary,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: theme.onSurface.withValues(alpha: 0.1),
-              ),
             ),
             child: Icon(
               shortcut.icon.iconData,
-              color: theme.primary,
+              color: Colors.white,
             ),
           ),
           title: Text(
