@@ -8,6 +8,7 @@ import '../../../models/shortcuts/editor_models.dart';
 import '../../../models/shortcuts/shortcut_definition.dart';
 import '../../../models/shortcuts/variable.dart';
 import 'component_panel.dart';
+import 'property_editor.dart';
 
 /// Widget for rendering composite components (IF-ELSE, SWITCH-CASE, etc.)
 class CompositeComponentWidget extends HookWidget {
@@ -16,7 +17,7 @@ class CompositeComponentWidget extends HookWidget {
   final Function(String componentId) onRemoveComponent;
   final Function(int oldIndex, int newIndex, String sectionId) onReorderInSection;
   final Function(String componentId, String key, dynamic value) onPropertyChanged;
-  final List<dynamic> availableVariables;
+  final List<Variable> availableVariables;
   final Function(Variable) onAddVariable;
   final bool isExpanded;
   final Function() onToggleExpand;
@@ -588,47 +589,85 @@ class CompositeComponentWidget extends HookWidget {
     int index,
     dynamic theme,
   ) {
-    // Use a simplified component card for children within sections
-    return Container(
+    // Get the component template for property editing
+    final template = ComponentTemplateLibrary.getTemplate(child.component.type);
+    
+    return _DraggableChildWidget(
       key: ValueKey(child.id),
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: theme.surface,
-        border: Border.all(
-          color: theme.onBackground.withValues(alpha: 0.1),
-        ),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ListTile(
-        leading: ReorderableDragStartListener(
-          index: index,
-          child: Icon(
-            Icons.drag_handle,
-            color: theme.onBackground.withValues(alpha: 0.4),
-          ),
-        ),
-        title: Text(
-          _getComponentName(child.component),
-          style: TextStyle(color: theme.onBackground),
-        ),
-        subtitle: Text(
-          'Type: ${child.component.type.toString().split('.').last}',
-          style: TextStyle(
-            color: theme.onBackground.withValues(alpha: 0.6),
-            fontSize: 12,
-          ),
-        ),
-        trailing: IconButton(
-          icon: Icon(
-            Icons.close,
-            color: theme.error,
-            size: 20,
-          ),
-          onPressed: () => onRemoveComponent(child.id),
-        ),
-      ),
+      child: child,
+      section: section,
+      index: index,
+      theme: theme,
+      template: template,
+      onRemoveComponent: onRemoveComponent,
+      onPropertyChanged: onPropertyChanged,
+      availableVariables: availableVariables,
+      onAddVariable: onAddVariable,
     );
   }
+
+  String _getComponentTitle(CompositeComponent component) {
+    switch (component.type) {
+      case CompositeComponentType.ifElse:
+        return 'IF-ELSE Structure';
+      case CompositeComponentType.switchCase:
+        return 'Menu-Driven Logic';
+      case CompositeComponentType.forEach:
+        return 'FOR-EACH Loop';
+      case CompositeComponentType.whileLoop:
+        return 'WHILE Loop';
+      case CompositeComponentType.tryError:
+        return 'TRY-CATCH Block';
+    }
+  }
+
+  IconData _getComponentIcon(CompositeComponentType type) {
+    switch (type) {
+      case CompositeComponentType.ifElse:
+        return Icons.call_split;
+      case CompositeComponentType.switchCase:
+        return Icons.account_tree;
+      case CompositeComponentType.forEach:
+        return Icons.repeat;
+      case CompositeComponentType.whileLoop:
+        return Icons.loop;
+      case CompositeComponentType.tryError:
+        return Icons.error_outline;
+    }
+  }
+
+  Color _getComponentColor(CompositeComponentType type) {
+    switch (type) {
+      case CompositeComponentType.ifElse:
+        return Colors.blue;
+      case CompositeComponentType.switchCase:
+        return Colors.orange;
+      case CompositeComponentType.forEach:
+        return Colors.green;
+      case CompositeComponentType.whileLoop:
+        return Colors.purple;
+      case CompositeComponentType.tryError:
+        return Colors.red;
+    }
+  }
+
+  IconData _getSectionIcon(CompositeSectionType type) {
+    switch (type) {
+      case CompositeSectionType.condition:
+        return Icons.help_outline;
+      case CompositeSectionType.branch:
+        return Icons.arrow_forward;
+      case CompositeSectionType.caseOption:
+        return Icons.label_outline;
+      case CompositeSectionType.default_:
+        return Icons.all_inclusive;
+      case CompositeSectionType.terminator:
+        return Icons.stop;
+      default:
+        return Icons.circle_outlined;
+    }
+  }
+
 
   void _showAddComponentDialog(ComponentSection section) {
     final theme = ThemeController.to.currentThemeConfig;
@@ -766,72 +805,187 @@ class CompositeComponentWidget extends HookWidget {
       ),
     );
   }
+}
 
-  String _getComponentTitle(CompositeComponent component) {
-    switch (component.type) {
-      case CompositeComponentType.ifElse:
-        return 'IF-ELSE Structure';
-      case CompositeComponentType.switchCase:
-        return 'Menu-Driven Logic';
-      case CompositeComponentType.forEach:
-        return 'FOR-EACH Loop';
-      case CompositeComponentType.whileLoop:
-        return 'WHILE Loop';
-      case CompositeComponentType.tryError:
-        return 'TRY-CATCH Block';
-    }
+// Separate widget to handle hooks properly
+class _DraggableChildWidget extends HookWidget {
+  final EditableComponent child;
+  final ComponentSection section;
+  final int index;
+  final dynamic theme;
+  final ComponentTemplate? template;
+  final Function(String) onRemoveComponent;
+  final Function(String, String, dynamic) onPropertyChanged;
+  final List<Variable> availableVariables;
+  final Function(Variable) onAddVariable;
+
+  const _DraggableChildWidget({
+    super.key,
+    required this.child,
+    required this.section,
+    required this.index,
+    required this.theme,
+    required this.template,
+    required this.onRemoveComponent,
+    required this.onPropertyChanged,
+    required this.availableVariables,
+    required this.onAddVariable,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Track expansion state
+    final isExpanded = useState(false);
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: theme.surface,
+        border: Border.all(
+          color: theme.onBackground.withValues(alpha: 0.1),
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          // Component header
+          InkWell(
+            onTap: () => isExpanded.value = !isExpanded.value,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                children: [
+                  // Drag handle
+                  ReorderableDragStartListener(
+                    index: index,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(
+                        Icons.drag_handle,
+                        color: theme.onBackground.withValues(alpha: 0.4),
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                  // Component icon
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: theme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(
+                      _getComponentIconByType(child.component.type),
+                      color: theme.primary,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Title and subtitle
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          child.component.properties['label'] ??
+                              child.component.properties['title'] ??
+                              child.component.type.toString().split('.').last,
+                          style: TextStyle(
+                            color: theme.onBackground,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          child.component.type.toString().split('.').last,
+                          style: TextStyle(
+                            color: theme.onBackground.withValues(alpha: 0.6),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Expand/collapse icon
+                  Icon(
+                    isExpanded.value ? Icons.expand_less : Icons.expand_more,
+                    color: theme.onBackground.withValues(alpha: 0.5),
+                    size: 20,
+                  ),
+                  // Delete button
+                  IconButton(
+                    icon: Icon(
+                      Icons.close,
+                      color: theme.error,
+                      size: 18,
+                    ),
+                    onPressed: () => onRemoveComponent(child.id),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Property editor (shown when expanded)
+          if (isExpanded.value && template != null)
+            ComponentPropertyEditor(
+              component: child.component,
+              template: template!,
+              onPropertyChanged: (key, value) {
+                onPropertyChanged(child.component.id, key, value);
+              },
+              availableVariables: availableVariables,
+              onAddVariable: onAddVariable,
+            ),
+        ],
+      ),
+    );
   }
 
-  IconData _getComponentIcon(CompositeComponentType type) {
+  IconData _getComponentIconByType(ComponentType type) {
     switch (type) {
-      case CompositeComponentType.ifElse:
-        return Icons.call_split;
-      case CompositeComponentType.switchCase:
-        return Icons.account_tree;
-      case CompositeComponentType.forEach:
-        return Icons.repeat;
-      case CompositeComponentType.whileLoop:
-        return Icons.loop;
-      case CompositeComponentType.tryError:
-        return Icons.error_outline;
-    }
-  }
-
-  Color _getComponentColor(CompositeComponentType type) {
-    switch (type) {
-      case CompositeComponentType.ifElse:
-        return Colors.blue;
-      case CompositeComponentType.switchCase:
-        return Colors.orange;
-      case CompositeComponentType.forEach:
-        return Colors.green;
-      case CompositeComponentType.whileLoop:
-        return Colors.purple;
-      case CompositeComponentType.tryError:
-        return Colors.red;
-    }
-  }
-
-  IconData _getSectionIcon(CompositeSectionType type) {
-    switch (type) {
-      case CompositeSectionType.condition:
-        return Icons.help_outline;
-      case CompositeSectionType.branch:
-        return Icons.arrow_forward;
-      case CompositeSectionType.caseOption:
-        return Icons.label_outline;
-      case CompositeSectionType.default_:
-        return Icons.all_inclusive;
-      case CompositeSectionType.terminator:
-        return Icons.stop;
+      case ComponentType.textInput:
+      case ComponentType.multilineTextInput:
+        return Icons.text_fields;
+      case ComponentType.numberInput:
+        return Icons.numbers;
+      case ComponentType.dateTimePicker:
+        return Icons.calendar_today;
+      case ComponentType.slider:
+        return Icons.tune;
+      case ComponentType.singleSelect:
+      case ComponentType.multiSelect:
+        return Icons.checklist;
+      case ComponentType.dropdown:
+        return Icons.arrow_drop_down_circle;
+      case ComponentType.toggle:
+      case ComponentType.switch_:
+        return Icons.toggle_on;
+      case ComponentType.tagSelect:
+      case ComponentType.tagInput:
+        return Icons.label;
+      case ComponentType.titleText:
+      case ComponentType.descriptionText:
+        return Icons.text_snippet;
+      case ComponentType.image:
+        return Icons.image;
+      case ComponentType.progressIndicator:
+        return Icons.linear_scale;
+      case ComponentType.groupContainer:
+        return Icons.view_module;
+      case ComponentType.tabs:
+        return Icons.tab;
+      case ComponentType.stepIndicator:
+        return Icons.format_list_numbered;
       default:
-        return Icons.circle_outlined;
+        return Icons.widgets;
     }
   }
 
-  String _getComponentName(UIComponent component) {
-    return component.properties['label'] ??
-        component.properties['title'] ??
-        component.type.toString().split('.').last;
-  }
 }
