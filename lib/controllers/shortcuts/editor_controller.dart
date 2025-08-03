@@ -295,7 +295,7 @@ class EditorController extends GetxController {
     // Convert to Map<String, VariableDefinition>
     final variableDefinitions = <String, VariableDefinition>{};
     for (final variable in variables) {
-      variableDefinitions[variable.id] = VariableDefinition(
+      variableDefinitions[variable.name] = VariableDefinition(
         name: variable.name,
         type: _convertVariableType(variable.type),
         defaultValue: variable.value,

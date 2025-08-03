@@ -223,7 +223,7 @@ class ComponentTemplateLibrary {
           key: 'variableName',
           label: 'Variable Name',
           type: PropertyType.variable,
-          required: true,
+          required: false,
         ),
         ComponentProperty(
           key: 'maxLength',
@@ -268,7 +268,7 @@ class ComponentTemplateLibrary {
           key: 'variableName',
           label: 'Variable Name',
           type: PropertyType.variable,
-          required: true,
+          required: false,
         ),
         ComponentProperty(
           key: 'rows',
@@ -308,7 +308,7 @@ class ComponentTemplateLibrary {
           key: 'variableName',
           label: 'Variable Name',
           type: PropertyType.variable,
-          required: true,
+          required: false,
         ),
         ComponentProperty(
           key: 'min',
@@ -354,7 +354,7 @@ class ComponentTemplateLibrary {
           key: 'variableName',
           label: 'Variable Name',
           type: PropertyType.variable,
-          required: true,
+          required: false,
         ),
         ComponentProperty(
           key: 'options',
@@ -393,7 +393,7 @@ class ComponentTemplateLibrary {
           key: 'variableName',
           label: 'Variable Name',
           type: PropertyType.variable,
-          required: true,
+          required: false,
         ),
         ComponentProperty(
           key: 'options',

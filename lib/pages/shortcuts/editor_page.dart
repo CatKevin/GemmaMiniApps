@@ -333,7 +333,8 @@ class EditorPage extends HookWidget {
                                       value,
                                     );
                                   },
-                                  availableVariables: session.variables,
+                                  availableVariables: variables.value,
+                                  onAddVariable: handleAddVariable,
                                 ),
                             ],
                           );

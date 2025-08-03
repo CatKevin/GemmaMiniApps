@@ -5,12 +5,14 @@ import '../../../core/theme/models/theme_config.dart';
 import '../../../models/shortcuts/models.dart';
 import 'rich_text_field.dart';
 import 'expression_editor.dart';
+import 'enhanced_variable_selector.dart';
 
 class ComponentPropertyEditor extends HookWidget {
   final UIComponent component;
   final ComponentTemplate template;
   final Function(String key, dynamic value) onPropertyChanged;
-  final Map<String, VariableDefinition> availableVariables;
+  final List<Variable> availableVariables;
+  final Function(Variable) onAddVariable;
   
   const ComponentPropertyEditor({
     super.key,
@@ -18,6 +20,7 @@ class ComponentPropertyEditor extends HookWidget {
     required this.template,
     required this.onPropertyChanged,
     required this.availableVariables,
+    required this.onAddVariable,
   });
 
   @override
@@ -354,122 +357,89 @@ class ComponentPropertyEditor extends HookWidget {
     // Check if we're editing variableBinding or a custom variable property
     final isVariableBinding = property.key == 'variableName';
     final currentValue = isVariableBinding 
-        ? (component.variableBinding ?? '') 
-        : (component.properties[property.key]?.toString() ?? '');
+        ? component.variableBinding 
+        : (component.properties[property.key]?.toString());
     
-    return Autocomplete<String>(
-      initialValue: TextEditingValue(text: currentValue),
-      optionsBuilder: (textEditingValue) {
-        if (textEditingValue.text.isEmpty) {
-          return availableVariables.keys;
-        }
-        return availableVariables.keys.where((name) =>
-          name.toLowerCase().contains(textEditingValue.text.toLowerCase())
-        );
-      },
-      onSelected: (selection) {
-        if (isVariableBinding) {
-          onPropertyChanged('variableBinding', selection);
-        } else {
-          onPropertyChanged(property.key, selection);
-        }
-      },
-      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-        return TextField(
-          controller: controller,
-          focusNode: focusNode,
-          onChanged: (value) {
+    // Determine suggested variable type based on component type
+    VariableType? suggestedType;
+    if (component.type == ComponentType.numberInput) {
+      suggestedType = VariableType.number;
+    } else if (component.type == ComponentType.conditional) {
+      suggestedType = VariableType.boolean;
+    } else {
+      suggestedType = VariableType.string;
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          property.label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: theme.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
+        const SizedBox(height: 8),
+        EnhancedVariableSelector(
+          currentValue: currentValue,
+          availableVariables: availableVariables,
+          componentLabel: component.properties['label']?.toString(),
+          suggestedType: suggestedType,
+          allowNull: !property.required,
+          onVariableSelected: (variableName) {
             if (isVariableBinding) {
-              onPropertyChanged('variableBinding', value);
+              onPropertyChanged('variableBinding', variableName);
             } else {
-              onPropertyChanged(property.key, value);
+              onPropertyChanged(property.key, variableName);
             }
           },
-          style: TextStyle(color: theme.onSurface),
-          decoration: InputDecoration(
-            labelText: property.label,
-            labelStyle: TextStyle(
-              color: theme.onSurface.withValues(alpha: 0.6),
-            ),
-            hintText: 'e.g., userName',
-            hintStyle: TextStyle(
-              color: theme.onSurface.withValues(alpha: 0.3),
-            ),
-            prefixIcon: Icon(
-              Icons.code,
-              color: theme.onSurface.withValues(alpha: 0.5),
-              size: 20,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: theme.onSurface.withValues(alpha: 0.2),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: theme.primary,
-              ),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          ),
-        );
-      },
-      optionsViewBuilder: (context, onSelected, options) {
-        return Align(
-          alignment: Alignment.topLeft,
-          child: Material(
-            elevation: 4,
-            child: Container(
-              constraints: const BoxConstraints(maxHeight: 200),
-              decoration: BoxDecoration(
-                color: theme.surface,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                shrinkWrap: true,
-                itemCount: options.length,
-                itemBuilder: (context, index) {
-                  final option = options.elementAt(index);
-                  return ListTile(
-                    dense: true,
-                    title: Text(
-                      option,
-                      style: TextStyle(
-                        color: theme.onSurface,
-                        fontSize: 14,
-                      ),
-                    ),
-                    onTap: () => onSelected(option),
-                  );
-                },
-              ),
-            ),
-          ),
-        );
-      },
+          onCreateVariable: onAddVariable,
+        ),
+      ],
     );
   }
   
   Widget _buildExpressionField(ComponentProperty property, ThemeConfig theme) {
     final currentValue = component.properties[property.key]?.toString() ?? '';
     
+    // Convert Variable list to Map<String, VariableDefinition>
+    final variableMap = <String, VariableDefinition>{};
+    for (final variable in availableVariables) {
+      variableMap[variable.name] = VariableDefinition(
+        name: variable.name,
+        type: variable.type,
+        defaultValue: variable.value,
+        description: variable.description,
+      );
+    }
+    
     return ExpressionEditor(
       initialValue: currentValue,
       onChanged: (value) => onPropertyChanged(property.key, value),
-      availableVariables: availableVariables,
+      availableVariables: variableMap,
       label: property.label,
       hint: 'e.g., age > 18',
     );
   }
   
   Widget _buildRichTextField(BuildContext context, ComponentProperty property, ThemeConfig theme) {
+    // Convert Variable list to Map<String, VariableDefinition>
+    final variableMap = <String, VariableDefinition>{};
+    for (final variable in availableVariables) {
+      variableMap[variable.name] = VariableDefinition(
+        name: variable.name,
+        type: variable.type,
+        defaultValue: variable.value,
+        description: variable.description,
+      );
+    }
+    
     return RichTextField(
       initialContent: component.properties[property.key]?.toString() ?? '',
       onContentChanged: (content) => onPropertyChanged(property.key, content),
-      availableVariables: availableVariables,
+      availableVariables: variableMap,
       label: property.label,
     );
   }
