@@ -23,38 +23,61 @@ class ShortcutsPage extends HookWidget {
     final filteredShortcuts = useState<List<ShortcutDefinition>>([]);
     final isLoading = useState(false);
     final storageService = useState<ShortcutsStorageService?>(null);
+    final lastLoadTime = useState<DateTime?>(null);
     
-    // Initialize storage and load shortcuts
-    useEffect(() {
-      Future<void> loadShortcuts() async {
-        isLoading.value = true;
-        try {
-          // Initialize storage service
+    // Load shortcuts function
+    Future<void> loadShortcuts() async {
+      if (isLoading.value) return; // Prevent duplicate loading
+      
+      isLoading.value = true;
+      try {
+        // Initialize storage service if not already initialized
+        if (storageService.value == null) {
           final service = await ShortcutsStorageService.initialize();
           storageService.value = service;
           
           // Create default shortcuts if none exist
           await service.createDefaultShortcuts();
-          
-          // Load all shortcuts
-          final allShortcuts = await service.getAllShortcuts();
-          shortcuts.value = allShortcuts;
-          filteredShortcuts.value = allShortcuts;
-        } catch (e) {
-          Get.snackbar(
-            'Error',
-            'Failed to load shortcuts: ${e.toString()}',
-            backgroundColor: themeController.currentThemeConfig.error,
-            colorText: themeController.currentThemeConfig.onError,
-          );
-        } finally {
-          isLoading.value = false;
         }
+        
+        // Load all shortcuts
+        final allShortcuts = await storageService.value!.getAllShortcuts();
+        shortcuts.value = allShortcuts;
+        filteredShortcuts.value = allShortcuts;
+        lastLoadTime.value = DateTime.now();
+      } catch (e) {
+        Get.snackbar(
+          'Error',
+          'Failed to load shortcuts: ${e.toString()}',
+          backgroundColor: themeController.currentThemeConfig.error,
+          colorText: themeController.currentThemeConfig.onError,
+        );
+      } finally {
+        isLoading.value = false;
       }
-      
+    }
+    
+    // Initialize and load shortcuts on first build
+    useEffect(() {
       loadShortcuts();
       return null;
     }, []);
+    
+    // Refresh shortcuts when navigating back to this page
+    useEffect(() {
+      // Check if we need to refresh when the widget rebuilds
+      if (lastLoadTime.value != null) {
+        final now = DateTime.now();
+        final timeSinceLastLoad = now.difference(lastLoadTime.value!);
+        
+        // Refresh if more than 2 seconds have passed (likely navigated back)
+        if (timeSinceLastLoad.inSeconds > 2) {
+          loadShortcuts();
+        }
+      }
+      
+      return null;
+    });
     
     // Filter shortcuts when category or search changes
     useEffect(() {
@@ -84,6 +107,11 @@ class ShortcutsPage extends HookWidget {
       appBar: AppBar(
         title: const Text('SHORTCUTS'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: isLoading.value ? null : () => loadShortcuts(),
+            tooltip: 'Refresh',
+          ),
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
@@ -193,30 +221,34 @@ class ShortcutsPage extends HookWidget {
                             ],
                           ),
                         )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          itemCount: filteredShortcuts.value.length,
-                          itemBuilder: (context, index) {
-                            final shortcut = filteredShortcuts.value[index];
-                            return _ShortcutCard(
-                              shortcut: shortcut,
-                              onTap: () async {
-                                // Update usage statistics
-                                if (storageService.value != null) {
-                                  await storageService.value!.updateUsageStats(shortcut.id);
-                                }
-                                
-                                // Navigate to runtime
-                                Routes.toShortcutsRuntime(shortcutId: shortcut.id);
-                              },
-                              onLongPress: () => _showContextMenu(
-                                context: context,
+                      : RefreshIndicator(
+                          onRefresh: loadShortcuts,
+                          backgroundColor: theme.surface,
+                          color: theme.primary,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            itemCount: filteredShortcuts.value.length,
+                            itemBuilder: (context, index) {
+                              final shortcut = filteredShortcuts.value[index];
+                              return _ShortcutCard(
                                 shortcut: shortcut,
-                                onEdit: () {
-                                  Navigator.of(context).pop();
-                                  Routes.toShortcutsBasicInfo(shortcutId: shortcut.id);
+                                onTap: () async {
+                                  // Update usage statistics
+                                  if (storageService.value != null) {
+                                    await storageService.value!.updateUsageStats(shortcut.id);
+                                  }
+                                  
+                                  // Navigate to runtime
+                                  Routes.toShortcutsRuntime(shortcutId: shortcut.id);
                                 },
-                                onDelete: () async {
+                                onLongPress: () => _showContextMenu(
+                                  context: context,
+                                  shortcut: shortcut,
+                                  onEdit: () {
+                                    Navigator.of(context).pop();
+                                    Routes.toShortcutsBasicInfo(shortcutId: shortcut.id);
+                                  },
+                                  onDelete: () async {
                                   Navigator.of(context).pop();
                                   
                                   // Show delete confirmation
@@ -286,6 +318,7 @@ class ShortcutsPage extends HookWidget {
                             );
                           },
                         ),
+                      ),
             ),
           ],
         );

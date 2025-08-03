@@ -113,12 +113,32 @@ class EditorPage extends HookWidget {
       );
 
       if (success) {
-        Get.back(result: true);
+        // Navigate back to shortcuts list page
+        Get.until((route) => route.settings.name == Routes.shortcuts);
+        
         Get.snackbar(
           'Success',
-          'Shortcut saved successfully',
+          'Shortcut "${shortcutName.value}" created successfully',
           backgroundColor: themeController.currentThemeConfig.primary,
           colorText: themeController.currentThemeConfig.onPrimary,
+          duration: const Duration(seconds: 3),
+          mainButton: TextButton(
+            onPressed: () {
+              Get.closeCurrentSnackbar();
+              // Navigate to the newly created shortcut's runtime
+              final newShortcutId = controller.session.value?.shortcutId;
+              if (newShortcutId != null) {
+                Routes.toShortcutsRuntime(shortcutId: newShortcutId);
+              }
+            },
+            child: Text(
+              'USE NOW',
+              style: TextStyle(
+                color: themeController.currentThemeConfig.onPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         );
       }
     }
