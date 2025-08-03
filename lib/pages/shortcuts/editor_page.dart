@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:get/get.dart';
+import 'package:collection/collection.dart';
 import '../../core/theme/controllers/theme_controller.dart';
 import '../../models/shortcuts/models.dart';
 import '../../controllers/shortcuts/editor_controller.dart';
@@ -13,6 +14,28 @@ import '../routes.dart';
 
 class EditorPage extends HookWidget {
   const EditorPage({super.key});
+
+  // Helper function to convert VariableDefinition to Variable
+  static List<Variable> _convertVariableDefinitionsToVariables(
+    Map<String, VariableDefinition> definitions,
+    List<Variable>? existingVariables,
+  ) {
+    final convertedVariables = <Variable>[];
+    definitions.forEach((name, definition) {
+      // Try to preserve existing variable values
+      final existingVar = existingVariables?.firstWhereOrNull((v) => v.name == name);
+      convertedVariables.add(Variable(
+        id: existingVar?.id ?? name,
+        name: name,
+        type: definition.type,
+        value: existingVar?.value ?? definition.defaultValue,
+        description: definition.description,
+        source: VariableSource.userInput,
+        lastUpdated: DateTime.now(),
+      ));
+    });
+    return convertedVariables;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,22 +85,107 @@ class EditorPage extends HookWidget {
       if (shortcutId != null) {
         isLoadingShortcut.value = true;
         ShortcutsStorageService.initialize().then((storage) async {
-          final shortcut = await storage.getShortcut(shortcutId);
-          if (shortcut != null) {
-            existingShortcut.value = shortcut;
-            shortcutName.value = shortcut.name;
-            shortcutDescription.value = shortcut.description;
-            selectedCategory.value = ShortcutCategory.fromString(shortcut.category);
-            selectedIcon.value = shortcut.icon;
-            controller.initializeEditor(shortcut);
+          try {
+            final shortcut = await storage.getShortcut(shortcutId);
+            if (shortcut != null) {
+              existingShortcut.value = shortcut;
+              shortcutName.value = shortcut.name;
+              shortcutDescription.value = shortcut.description;
+              selectedCategory.value = ShortcutCategory.fromString(shortcut.category);
+              selectedIcon.value = shortcut.icon;
+              controller.initializeEditor(shortcut);
+              
+              // Convert and sync variables from controller to UI
+              // Wait for controller to initialize
+              await Future.delayed(const Duration(milliseconds: 100));
+              if (controller.session.value != null && controller.session.value!.variables.isNotEmpty) {
+                variables.value = _convertVariableDefinitionsToVariables(
+                  controller.session.value!.variables,
+                  null, // No existing variables on initial load
+                );
+                
+                // Show success feedback
+                Get.snackbar(
+                  'Variables Loaded',
+                  '${variables.value.length} variables loaded successfully',
+                  snackPosition: SnackPosition.TOP,
+                  duration: const Duration(seconds: 2),
+                  backgroundColor: themeController.currentThemeConfig.primary.withValues(alpha: 0.9),
+                  colorText: themeController.currentThemeConfig.onPrimary,
+                  margin: const EdgeInsets.all(16),
+                  borderRadius: 12,
+                );
+              }
+            } else {
+              Get.snackbar(
+                'Error',
+                'Shortcut not found',
+                snackPosition: SnackPosition.TOP,
+                backgroundColor: themeController.currentThemeConfig.error,
+                colorText: themeController.currentThemeConfig.onError,
+                margin: const EdgeInsets.all(16),
+                borderRadius: 12,
+              );
+              Get.back();
+            }
+          } catch (e) {
+            Get.snackbar(
+              'Error Loading Variables',
+              'Failed to load variables: ${e.toString()}',
+              snackPosition: SnackPosition.TOP,
+              backgroundColor: themeController.currentThemeConfig.error,
+              colorText: themeController.currentThemeConfig.onError,
+              margin: const EdgeInsets.all(16),
+              borderRadius: 12,
+            );
+          } finally {
+            isLoadingShortcut.value = false;
           }
+        }).catchError((error) {
           isLoadingShortcut.value = false;
+          Get.snackbar(
+            'Error',
+            'Failed to load shortcut: ${error.toString()}',
+            snackPosition: SnackPosition.TOP,
+            backgroundColor: themeController.currentThemeConfig.error,
+            colorText: themeController.currentThemeConfig.onError,
+            margin: const EdgeInsets.all(16),
+            borderRadius: 12,
+          );
         });
       } else {
         controller.initializeEditor(null);
       }
       return null;
     }, [shortcutId]);
+
+    // Listen to controller session changes and sync variables
+    useEffect(() {
+      if (controller.session.value != null) {
+        // Create a listener for session changes
+        ever(controller.session, (session) {
+          try {
+            if (session != null && session.variables.isNotEmpty) {
+              // Only sync if variables from controller are different
+              final currentVarNames = variables.value.map((v) => v.name).toSet();
+              final sessionVarNames = session.variables.keys.toSet();
+              
+              // Check if we need to sync (different variable sets)
+              if (!const SetEquality().equals(currentVarNames, sessionVarNames)) {
+                variables.value = _convertVariableDefinitionsToVariables(
+                  session.variables,
+                  variables.value,
+                );
+              }
+            }
+          } catch (e) {
+            // Log error but don't show to user to avoid spamming
+            debugPrint('Error syncing variables: $e');
+          }
+        });
+      }
+      return null;
+    }, [controller]);
 
     // Handle variable updates
     void handleAddVariable(Variable variable) {

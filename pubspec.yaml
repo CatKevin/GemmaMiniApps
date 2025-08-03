@@ -41,6 +41,9 @@ dependencies:
   # State management using React-like hooks
   flutter_hooks: ^0.20.5
   
+  # Collection utilities
+  collection: ^1.18.0
+  
   # Navigation and state management
   get: ^4.6.6
   
