@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -13,28 +14,27 @@ class BasicInfoPage extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final theme = ThemeController.to.currentThemeConfig;
-    
+
     // Get route arguments
     final args = Get.arguments as Map<String, dynamic>?;
     final shortcutId = args?['shortcutId'] as String?;
-    
+
     // Loading and data states
     final isLoading = useState(false);
     final existingShortcut = useState<ShortcutDefinition?>(null);
-    
+
     // Form controllers (initialized with empty values)
     final nameController = useTextEditingController();
     final descriptionController = useTextEditingController();
-    
+
     // State
-    final selectedIcon = useState<IconData>(Icons.flash_on);
-    final selectedColor = useState<Color>(theme.primary);
+    final selectedIcon = useState<IconData?>(null);
+    final selectedColor = useState<Color?>(null);
     final selectedTags = useState<Set<String>>({});
     final showIconPicker = useState(false);
-    final showColorPicker = useState(false);
     final nameError = useState<String?>(null);
     final hasInitialized = useState(false);
-    
+
     // Load existing shortcut if editing
     useEffect(() {
       if (shortcutId != null && !hasInitialized.value) {
@@ -75,7 +75,7 @@ class BasicInfoPage extends HookWidget {
       }
       return null;
     }, []);
-    
+
     // Available icons
     final availableIcons = [
       Icons.flash_on,
@@ -179,31 +179,40 @@ class BasicInfoPage extends HookWidget {
       Icons.key,
       Icons.fingerprint,
     ];
-    
-    // Available colors
+
+    // Available colors - High-tech vibrant palette sorted by color type
     final availableColors = [
-      theme.primary,
-      Colors.red,
-      Colors.pink,
-      Colors.purple,
-      Colors.deepPurple,
-      Colors.indigo,
-      Colors.blue,
-      Colors.lightBlue,
-      Colors.cyan,
-      Colors.teal,
-      Colors.green,
-      Colors.lightGreen,
-      Colors.lime,
-      Colors.yellow,
-      Colors.amber,
-      Colors.orange,
-      Colors.deepOrange,
-      Colors.brown,
-      Colors.grey,
-      Colors.blueGrey,
+      // Blue Series - Tech & Innovation
+      const Color(0xFF0EA5E9), // Sky Blue
+      const Color(0xFF3B82F6), // Electric Blue
+      const Color(0xFF6366F1), // Indigo Blue
+      const Color(0xFF06B6D4), // Cyan
+
+      // Purple Series - Creativity & Future
+      const Color(0xFF8B5CF6), // Violet
+      const Color(0xFFA855F7), // Purple
+      const Color(0xFFD946EF), // Magenta
+      const Color(0xFFE879F9), // Orchid
+
+      // Pink & Red Series - Energy & Passion
+      const Color(0xFFEC4899), // Hot Pink
+      const Color(0xFFF43F5E), // Rose
+      const Color(0xFFEF4444), // Red
+      const Color(0xFFDC2626), // Crimson Red
+
+      // Orange & Yellow Series - Warmth & Optimism
+      const Color(0xFFF97316), // Orange
+      const Color(0xFFF59E0B), // Amber
+      const Color(0xFFEAB308), // Yellow
+      const Color(0xFF84CC16), // Lime
+
+      // Green Series - Growth & Balance
+      const Color(0xFF22C55E), // Green
+      const Color(0xFF10B981), // Emerald
+      const Color(0xFF14B8A6), // Teal
+      const Color(0xFF059669), // Deep Green
     ];
-    
+
     // Available tags
     final availableTags = [
       'Productivity',
@@ -222,33 +231,53 @@ class BasicInfoPage extends HookWidget {
       'Communication',
       'Organization',
     ];
-    
+
+    // Initialize random color and icon if not set
+    useEffect(() {
+      if (shortcutId == null) {
+        final random = math.Random();
+        
+        // Select random color if not set
+        if (selectedColor.value == null) {
+          selectedColor.value =
+              availableColors[random.nextInt(availableColors.length)];
+        }
+        
+        // Select random icon if not set
+        if (selectedIcon.value == null) {
+          selectedIcon.value =
+              availableIcons[random.nextInt(availableIcons.length)];
+        }
+      }
+      return null;
+    }, [availableColors, availableIcons]);
+
     void validateAndProceed() {
       // Validate name
       if (nameController.text.trim().isEmpty) {
         nameError.value = 'Name is required';
         return;
       }
-      
+
       if (nameController.text.trim().length < 3) {
         nameError.value = 'Name must be at least 3 characters';
         return;
       }
-      
+
       nameError.value = null;
-      
+
       // Create initial shortcut data
       final basicInfo = {
         'name': nameController.text.trim(),
         'description': descriptionController.text.trim(),
-        'icon': selectedIcon.value,
-        'color': selectedColor.value,
+        'icon': selectedIcon.value ?? Icons.flash_on,
+        'color': selectedColor.value ?? theme.primary,
         'tags': selectedTags.value.toList(),
-        'category': selectedTags.value.isNotEmpty 
-            ? selectedTags.value.first 
+        'category': selectedTags.value.isNotEmpty
+            ? selectedTags.value.first
             : 'utility',
       };
-      
+
       // Navigate to editor with basic info
       if (existingShortcut.value != null) {
         Routes.toShortcutsEditor(
@@ -259,7 +288,7 @@ class BasicInfoPage extends HookWidget {
         Routes.toShortcutsEditor(basicInfo: basicInfo);
       }
     }
-    
+
     // Show loading state while fetching data
     if (isLoading.value) {
       return Scaffold(
@@ -291,7 +320,7 @@ class BasicInfoPage extends HookWidget {
         ),
       );
     }
-    
+
     return Scaffold(
       backgroundColor: theme.background,
       bottomNavigationBar: Container(
@@ -374,7 +403,7 @@ class BasicInfoPage extends HookWidget {
               ),
             ),
           ),
-          
+
           // Content
           SafeArea(
             child: Column(
@@ -395,20 +424,27 @@ class BasicInfoPage extends HookWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              existingShortcut.value != null 
-                                  ? 'Edit Shortcut Info' 
+                              existingShortcut.value != null
+                                  ? 'Edit Shortcut Info'
                                   : 'Create New Shortcut',
-                              style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                                color: theme.onBackground,
-                                fontWeight: FontWeight.w700,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .displayLarge
+                                  ?.copyWith(
+                                    color: theme.onBackground,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               'Step 1 of 2: Basic Information',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: theme.onBackground.withValues(alpha: 0.6),
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: theme.onBackground
+                                        .withValues(alpha: 0.6),
+                                  ),
                             ),
                           ],
                         ),
@@ -416,7 +452,7 @@ class BasicInfoPage extends HookWidget {
                     ],
                   ),
                 ),
-                
+
                 // Form content
                 Expanded(
                   child: SingleChildScrollView(
@@ -438,14 +474,17 @@ class BasicInfoPage extends HookWidget {
                                       showIconPicker.value = true;
                                     },
                                     child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 300),
+                                      duration:
+                                          const Duration(milliseconds: 300),
                                       width: 120,
                                       height: 120,
                                       decoration: BoxDecoration(
-                                        color: selectedColor.value,
+                                        color: selectedColor.value ??
+                                            theme.primary,
                                         borderRadius: BorderRadius.circular(30),
                                         border: Border.all(
-                                          color: theme.onBackground.withValues(alpha: 0.1),
+                                          color: theme.onBackground
+                                              .withValues(alpha: 0.1),
                                           width: 1,
                                         ),
                                       ),
@@ -453,7 +492,7 @@ class BasicInfoPage extends HookWidget {
                                         alignment: Alignment.center,
                                         children: [
                                           Icon(
-                                            selectedIcon.value,
+                                            selectedIcon.value ?? Icons.flash_on,
                                             size: 56,
                                             color: Colors.white,
                                           ),
@@ -466,13 +505,15 @@ class BasicInfoPage extends HookWidget {
                                                 color: theme.background,
                                                 shape: BoxShape.circle,
                                                 border: Border.all(
-                                                  color: theme.onBackground.withValues(alpha: 0.1),
+                                                  color: theme.onBackground
+                                                      .withValues(alpha: 0.1),
                                                 ),
                                               ),
                                               child: Icon(
                                                 Icons.edit,
                                                 size: 16,
-                                                color: theme.onBackground.withValues(alpha: 0.6),
+                                                color: theme.onBackground
+                                                    .withValues(alpha: 0.6),
                                               ),
                                             ),
                                           ),
@@ -483,49 +524,61 @@ class BasicInfoPage extends HookWidget {
                                   const SizedBox(height: 16),
                                   Text(
                                     'Tap to change icon',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: theme.onBackground.withValues(alpha: 0.4),
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: theme.onBackground
+                                              .withValues(alpha: 0.4),
+                                        ),
                                   ),
-                                  
+
                                   const SizedBox(height: 24),
-                                  
+
                                   // Color selection
                                   Text(
                                     'Choose Color',
-                                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                      color: theme.onBackground,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelLarge
+                                        ?.copyWith(
+                                          color: theme.onBackground,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                   ),
                                   const SizedBox(height: 12),
                                   Wrap(
                                     spacing: 12,
                                     runSpacing: 12,
                                     children: availableColors.map((color) {
-                                      final isSelected = selectedColor.value == color;
+                                      final isSelected =
+                                          selectedColor.value != null &&
+                                              selectedColor.value == color;
                                       return GestureDetector(
                                         onTap: () {
                                           HapticFeedback.selectionClick();
                                           selectedColor.value = color;
                                         },
                                         child: AnimatedContainer(
-                                          duration: const Duration(milliseconds: 200),
+                                          duration:
+                                              const Duration(milliseconds: 200),
                                           width: 40,
                                           height: 40,
                                           decoration: BoxDecoration(
                                             color: color,
                                             shape: BoxShape.circle,
                                             border: Border.all(
-                                              color: isSelected 
-                                                  ? theme.onBackground 
-                                                  : color.withValues(alpha: 0.3),
+                                              color: isSelected
+                                                  ? theme.onBackground
+                                                  : color.withValues(
+                                                      alpha: 0.3),
                                               width: isSelected ? 3 : 1,
                                             ),
                                             boxShadow: [
                                               if (isSelected)
                                                 BoxShadow(
-                                                  color: color.withValues(alpha: 0.4),
+                                                  color: color.withValues(
+                                                      alpha: 0.4),
                                                   blurRadius: 12,
                                                   offset: const Offset(0, 4),
                                                 ),
@@ -535,9 +588,11 @@ class BasicInfoPage extends HookWidget {
                                               ? Icon(
                                                   Icons.check,
                                                   size: 20,
-                                                  color: color.computeLuminance() > 0.5
-                                                      ? Colors.black
-                                                      : Colors.white,
+                                                  color:
+                                                      color.computeLuminance() >
+                                                              0.5
+                                                          ? Colors.black
+                                                          : Colors.white,
                                                 )
                                               : null,
                                         ),
@@ -547,9 +602,9 @@ class BasicInfoPage extends HookWidget {
                                 ],
                               ),
                             ),
-                            
+
                             const SizedBox(height: 48),
-                            
+
                             // Name field
                             _buildLabel('Name', theme, context),
                             const SizedBox(height: 12),
@@ -559,7 +614,8 @@ class BasicInfoPage extends HookWidget {
                               decoration: InputDecoration(
                                 hintText: 'Give your shortcut a memorable name',
                                 hintStyle: TextStyle(
-                                  color: theme.onBackground.withValues(alpha: 0.4),
+                                  color:
+                                      theme.onBackground.withValues(alpha: 0.4),
                                 ),
                                 filled: true,
                                 fillColor: theme.surface,
@@ -570,7 +626,8 @@ class BasicInfoPage extends HookWidget {
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   borderSide: BorderSide(
-                                    color: theme.onBackground.withValues(alpha: 0.1),
+                                    color: theme.onBackground
+                                        .withValues(alpha: 0.1),
                                   ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
@@ -583,14 +640,15 @@ class BasicInfoPage extends HookWidget {
                                 errorText: nameError.value,
                                 prefixIcon: Icon(
                                   Icons.label_outline,
-                                  color: theme.onBackground.withValues(alpha: 0.6),
+                                  color:
+                                      theme.onBackground.withValues(alpha: 0.6),
                                 ),
                               ),
                               onChanged: (_) => nameError.value = null,
                             ),
-                            
+
                             const SizedBox(height: 24),
-                            
+
                             // Description field
                             _buildLabel('Description', theme, context),
                             const SizedBox(height: 12),
@@ -601,7 +659,8 @@ class BasicInfoPage extends HookWidget {
                               decoration: InputDecoration(
                                 hintText: 'What does this shortcut do?',
                                 hintStyle: TextStyle(
-                                  color: theme.onBackground.withValues(alpha: 0.4),
+                                  color:
+                                      theme.onBackground.withValues(alpha: 0.4),
                                 ),
                                 filled: true,
                                 fillColor: theme.surface,
@@ -612,7 +671,8 @@ class BasicInfoPage extends HookWidget {
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   borderSide: BorderSide(
-                                    color: theme.onBackground.withValues(alpha: 0.1),
+                                    color: theme.onBackground
+                                        .withValues(alpha: 0.1),
                                   ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
@@ -630,26 +690,30 @@ class BasicInfoPage extends HookWidget {
                                   ),
                                   child: Icon(
                                     Icons.description_outlined,
-                                    color: theme.onBackground.withValues(alpha: 0.6),
+                                    color: theme.onBackground
+                                        .withValues(alpha: 0.6),
                                   ),
                                 ),
                               ),
                             ),
-                            
+
                             const SizedBox(height: 24),
-                            
+
                             // Tags
-                            _buildLabel('Tags (Choose up to 3)', theme, context),
+                            _buildLabel(
+                                'Tags (Choose up to 3)', theme, context),
                             const SizedBox(height: 12),
                             Wrap(
                               spacing: 8,
                               runSpacing: 8,
                               children: availableTags.map((tag) {
-                                final isSelected = selectedTags.value.contains(tag.toLowerCase());
+                                final isSelected = selectedTags.value
+                                    .contains(tag.toLowerCase());
                                 return InkWell(
                                   onTap: () {
                                     HapticFeedback.selectionClick();
-                                    final tags = Set<String>.from(selectedTags.value);
+                                    final tags =
+                                        Set<String>.from(selectedTags.value);
                                     if (isSelected) {
                                       tags.remove(tag.toLowerCase());
                                     } else if (tags.length < 3) {
@@ -675,14 +739,16 @@ class BasicInfoPage extends HookWidget {
                                       vertical: 8,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: isSelected 
-                                          ? selectedColor.value.withValues(alpha: 0.1)
+                                      color: isSelected
+                                          ? selectedColor.value!
+                                              .withValues(alpha: 0.1)
                                           : theme.surface,
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(
-                                        color: isSelected 
-                                            ? selectedColor.value 
-                                            : theme.onBackground.withValues(alpha: 0.2),
+                                        color: isSelected
+                                            ? selectedColor.value!
+                                            : theme.onBackground
+                                                .withValues(alpha: 0.2),
                                         width: isSelected ? 2 : 1,
                                       ),
                                     ),
@@ -693,17 +759,18 @@ class BasicInfoPage extends HookWidget {
                                           Icon(
                                             Icons.check,
                                             size: 16,
-                                            color: selectedColor.value,
+                                            color: selectedColor.value!,
                                           ),
-                                        if (isSelected) const SizedBox(width: 4),
+                                        if (isSelected)
+                                          const SizedBox(width: 4),
                                         Text(
                                           tag,
                                           style: TextStyle(
-                                            color: isSelected 
-                                                ? selectedColor.value 
+                                            color: isSelected
+                                                ? selectedColor.value!
                                                 : theme.onBackground,
-                                            fontWeight: isSelected 
-                                                ? FontWeight.w600 
+                                            fontWeight: isSelected
+                                                ? FontWeight.w600
                                                 : FontWeight.normal,
                                           ),
                                         ),
@@ -713,7 +780,7 @@ class BasicInfoPage extends HookWidget {
                                 );
                               }).toList(),
                             ),
-                            
+
                             const SizedBox(height: 48),
                           ],
                         ),
@@ -724,7 +791,7 @@ class BasicInfoPage extends HookWidget {
               ],
             ),
           ),
-          
+
           // Icon picker overlay
           if (showIconPicker.value)
             _buildIconPicker(
@@ -738,22 +805,22 @@ class BasicInfoPage extends HookWidget {
       ),
     );
   }
-  
+
   Widget _buildLabel(String text, dynamic theme, BuildContext context) {
     return Text(
       text,
       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-        color: theme.onBackground,
-        fontWeight: FontWeight.w600,
-      ),
+            color: theme.onBackground,
+            fontWeight: FontWeight.w600,
+          ),
     );
   }
-  
+
   Widget _buildIconPicker({
     required BuildContext context,
     required dynamic theme,
     required List<IconData> availableIcons,
-    required ValueNotifier<IconData> selectedIcon,
+    required ValueNotifier<IconData?> selectedIcon,
     required VoidCallback onClose,
   }) {
     return GestureDetector(
@@ -794,10 +861,11 @@ class BasicInfoPage extends HookWidget {
                       children: [
                         Text(
                           'Choose Icon',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: theme.onSurface,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: theme.onSurface,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                         ),
                         const Spacer(),
                         IconButton(
@@ -808,12 +876,13 @@ class BasicInfoPage extends HookWidget {
                       ],
                     ),
                   ),
-                  
+
                   // Icons grid
                   Expanded(
                     child: GridView.builder(
                       padding: const EdgeInsets.all(20),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 6,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
@@ -822,7 +891,7 @@ class BasicInfoPage extends HookWidget {
                       itemBuilder: (context, index) {
                         final icon = availableIcons[index];
                         final isSelected = selectedIcon.value == icon;
-                        
+
                         return InkWell(
                           onTap: () {
                             HapticFeedback.selectionClick();
@@ -833,20 +902,21 @@ class BasicInfoPage extends HookWidget {
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             decoration: BoxDecoration(
-                              color: isSelected 
+                              color: isSelected
                                   ? theme.primary.withValues(alpha: 0.1)
                                   : theme.background,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: isSelected 
-                                    ? theme.primary 
+                                color: isSelected
+                                    ? theme.primary
                                     : theme.onSurface.withValues(alpha: 0.1),
                                 width: isSelected ? 2 : 1,
                               ),
                             ),
                             child: Icon(
                               icon,
-                              color: isSelected ? theme.primary : theme.onSurface,
+                              color:
+                                  isSelected ? theme.primary : theme.onSurface,
                               size: 32,
                             ),
                           ),
