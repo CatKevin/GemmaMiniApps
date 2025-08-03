@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../../models/shortcuts/models.dart';
+import '../../models/shortcuts/composite_component.dart';
 import '../../services/shortcuts/storage_service.dart';
 
 class EditorController extends GetxController {
@@ -103,6 +104,126 @@ class EditorController extends GetxController {
       hasUnsavedChanges: true,
       lastModified: DateTime.now(),
     );
+  }
+  
+  /// Add a composite component (IF-ELSE, SWITCH-CASE, etc.)
+  void addCompositeComponent(CompositeComponentType type, {Map<String, dynamic>? config}) {
+    if (session.value == null) return;
+    
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    CompositeComponent compositeComponent;
+    
+    switch (type) {
+      case CompositeComponentType.ifElse:
+        compositeComponent = IfElseComponent(
+          id: id,
+          conditionExpression: config?['condition'] ?? '',
+        );
+        break;
+      case CompositeComponentType.switchCase:
+        // Use default options for direct creation
+        compositeComponent = SwitchCaseComponent(
+          id: id,
+          switchVariable: 'Select an option from the menu',
+          caseOptions: ['Option 1', 'Option 2', 'Option 3'],
+        );
+        break;
+      default:
+        return; // Not implemented yet
+    }
+    
+    var editableComponent = compositeComponent.toEditableComponent();
+    editableComponent = editableComponent.copyWith(order: session.value!.components.length);
+    
+    final updatedComponents = List<EditableComponent>.from(session.value!.components)
+      ..add(editableComponent);
+    
+    session.value = session.value!.copyWith(
+      components: updatedComponents,
+      hasUnsavedChanges: true,
+      lastModified: DateTime.now(),
+    );
+  }
+  
+  /// Add a component to a specific section of a composite component
+  void addComponentToSection(String sectionId, EditableComponent component) {
+    if (session.value == null) return;
+    
+    // Find the composite component containing this section
+    for (var i = 0; i < session.value!.components.length; i++) {
+      final comp = session.value!.components[i];
+      if (comp.isComposite && comp.compositeComponent != null) {
+        final section = comp.compositeComponent!.sections
+            .firstWhereOrNull((s) => s.id == sectionId);
+        
+        if (section != null) {
+          // Add component to section
+          component = component.copyWith(parentSectionId: sectionId);
+          section.children.add(component);
+          
+          // Update session
+          session.value = session.value!.copyWith(
+            hasUnsavedChanges: true,
+            lastModified: DateTime.now(),
+          );
+          break;
+        }
+      }
+    }
+  }
+  
+  /// Reorder components within a section
+  void reorderComponentsInSection(int oldIndex, int newIndex, String sectionId) {
+    if (session.value == null) return;
+    
+    // Find the section and reorder its children
+    for (var comp in session.value!.components) {
+      if (comp.isComposite && comp.compositeComponent != null) {
+        final section = comp.compositeComponent!.sections
+            .firstWhereOrNull((s) => s.id == sectionId);
+        
+        if (section != null && section.children.length > oldIndex) {
+          if (oldIndex < newIndex) {
+            newIndex -= 1;
+          }
+          
+          final item = section.children.removeAt(oldIndex);
+          section.children.insert(newIndex, item);
+          
+          // Update order values
+          for (int i = 0; i < section.children.length; i++) {
+            section.children[i] = section.children[i].copyWith(order: i);
+          }
+          
+          session.value = session.value!.copyWith(
+            hasUnsavedChanges: true,
+            lastModified: DateTime.now(),
+          );
+          break;
+        }
+      }
+    }
+  }
+  
+  /// Update SWITCH-CASE options based on menu selector
+  void updateSwitchCaseOptions(String switchCaseId, List<String> newOptions) {
+    if (session.value == null) return;
+    
+    final componentIndex = session.value!.components
+        .indexWhere((c) => c.id == switchCaseId && c.isComposite);
+    
+    if (componentIndex != -1) {
+      final component = session.value!.components[componentIndex];
+      if (component.compositeComponent is SwitchCaseComponent) {
+        final switchCase = component.compositeComponent as SwitchCaseComponent;
+        switchCase.updateCases(newOptions);
+        
+        session.value = session.value!.copyWith(
+          hasUnsavedChanges: true,
+          lastModified: DateTime.now(),
+        );
+      }
+    }
   }
   
   /// Remove a component

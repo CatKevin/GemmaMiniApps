@@ -9,6 +9,8 @@ import '../../controllers/shortcuts/editor_controller.dart';
 import '../../widgets/shortcuts/editor/widgets.dart';
 import '../../widgets/shortcuts/editor/variable_definition_section.dart';
 import '../../widgets/shortcuts/editor/draggable_component_card.dart';
+import '../../widgets/shortcuts/editor/composite_component_widget.dart';
+import '../../widgets/shortcuts/editor/composite_component_panel.dart';
 import '../../services/shortcuts/storage_service.dart';
 import '../routes.dart';
 
@@ -268,6 +270,25 @@ class EditorPage extends HookWidget {
         ),
       );
     }
+    
+    void handleAddLogicComponent() {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          builder: (context, scrollController) => CompositeComponentPanel(
+            onComponentSelected: (type, config) {
+              controller.addCompositeComponent(type, config: config);
+              Navigator.of(context).pop();
+            },
+          ),
+        ),
+      );
+    }
 
     // Show loading indicator while loading shortcut
     if (isLoadingShortcut.value) {
@@ -438,41 +459,80 @@ class EditorPage extends HookWidget {
                                   },
                                   itemBuilder: (context, index) {
                                     final component = session.components[index];
-                                    final template = ComponentTemplateLibrary.getTemplate(
-                                      component.component.type,
-                                    );
+                                    
+                                    // Check if it's a composite component
+                                    if (component.isComposite && component.compositeComponent != null) {
+                                      return CompositeComponentWidget(
+                                        key: ValueKey(component.id),
+                                        component: component.compositeComponent!,
+                                        isExpanded: component.isExpanded,
+                                        onToggleExpand: () {
+                                          controller.toggleComponentExpansion(component.id);
+                                        },
+                                        onDelete: () {
+                                          controller.removeComponent(component.id);
+                                        },
+                                        onAddComponent: (sectionId, newComponent) {
+                                          controller.addComponentToSection(sectionId, newComponent);
+                                        },
+                                        onRemoveComponent: (componentId) {
+                                          controller.removeComponent(componentId);
+                                        },
+                                        onReorderInSection: (oldIndex, newIndex, sectionId) {
+                                          controller.reorderComponentsInSection(
+                                            oldIndex,
+                                            newIndex,
+                                            sectionId,
+                                          );
+                                        },
+                                        onPropertyChanged: (componentId, key, value) {
+                                          controller.updateComponentProperty(
+                                            componentId,
+                                            key,
+                                            value,
+                                          );
+                                        },
+                                        availableVariables: variables.value,
+                                        onAddVariable: handleAddVariable,
+                                      );
+                                    } else {
+                                      // Regular component
+                                      final template = ComponentTemplateLibrary.getTemplate(
+                                        component.component.type,
+                                      );
 
-                                    return DraggableComponentCard(
-                                      key: ValueKey(component.id),
-                                      component: component,
-                                      template: template,
-                                      index: index,
-                                      totalCount: session.components.length,
-                                      theme: theme,
-                                      onExpand: () {
-                                        controller.toggleComponentExpansion(component.id);
-                                      },
-                                      onDelete: () {
-                                        controller.removeComponent(component.id);
-                                      },
-                                      onMoveUp: index > 0 ? () {
-                                        HapticFeedback.lightImpact();
-                                        controller.reorderComponents(index, index - 1);
-                                      } : null,
-                                      onMoveDown: index < session.components.length - 1 ? () {
-                                        HapticFeedback.lightImpact();
-                                        controller.reorderComponents(index, index + 1);
-                                      } : null,
-                                      onPropertyChanged: (key, value) {
-                                        controller.updateComponentProperty(
-                                          component.id,
-                                          key,
-                                          value,
-                                        );
-                                      },
-                                      availableVariables: variables.value,
-                                      onAddVariable: handleAddVariable,
-                                    );
+                                      return DraggableComponentCard(
+                                        key: ValueKey(component.id),
+                                        component: component,
+                                        template: template,
+                                        index: index,
+                                        totalCount: session.components.length,
+                                        theme: theme,
+                                        onExpand: () {
+                                          controller.toggleComponentExpansion(component.id);
+                                        },
+                                        onDelete: () {
+                                          controller.removeComponent(component.id);
+                                        },
+                                        onMoveUp: index > 0 ? () {
+                                          HapticFeedback.lightImpact();
+                                          controller.reorderComponents(index, index - 1);
+                                        } : null,
+                                        onMoveDown: index < session.components.length - 1 ? () {
+                                          HapticFeedback.lightImpact();
+                                          controller.reorderComponents(index, index + 1);
+                                        } : null,
+                                        onPropertyChanged: (key, value) {
+                                          controller.updateComponentProperty(
+                                            component.id,
+                                            key,
+                                            value,
+                                          );
+                                        },
+                                        availableVariables: variables.value,
+                                        onAddVariable: handleAddVariable,
+                                      );
+                                    }
                                   },
                               ),
                           ],
@@ -480,7 +540,7 @@ class EditorPage extends HookWidget {
                       ),
               ),
               
-              // Add component button at the bottom
+              // Add component buttons at the bottom
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -491,21 +551,40 @@ class EditorPage extends HookWidget {
                     ),
                   ),
                 ),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: handleAddComponent,
-                    icon: const Icon(Icons.add),
-                    label: const Text('ADD COMPONENT'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.primary,
-                      foregroundColor: theme.onPrimary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: handleAddComponent,
+                        icon: const Icon(Icons.add),
+                        label: const Text('COMPONENT'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primary,
+                          foregroundColor: theme.onPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: handleAddLogicComponent,
+                        icon: const Icon(Icons.account_tree),
+                        label: const Text('LOGIC'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

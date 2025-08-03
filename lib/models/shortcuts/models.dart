@@ -4,3 +4,4 @@ export 'execution_context.dart';
 export 'editor_models.dart';
 export 'shortcut_category.dart';
 export 'variable.dart';
+export 'composite_component.dart';

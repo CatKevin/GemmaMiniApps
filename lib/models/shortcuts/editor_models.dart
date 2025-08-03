@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'shortcut_definition.dart';
+import 'composite_component.dart';
 
 /// Component that can be added from the component panel
 class ComponentTemplate {
@@ -76,6 +77,9 @@ class EditableComponent {
   final bool isSelected;
   final int order;
   final quill.QuillController? richTextController;
+  final bool isComposite;
+  final CompositeComponent? compositeComponent;
+  final String? parentSectionId; // For components inside composite sections
 
   EditableComponent({
     required this.id,
@@ -84,6 +88,9 @@ class EditableComponent {
     this.isSelected = false,
     required this.order,
     this.richTextController,
+    this.isComposite = false,
+    this.compositeComponent,
+    this.parentSectionId,
   });
 
   EditableComponent copyWith({
@@ -93,6 +100,9 @@ class EditableComponent {
     bool? isSelected,
     int? order,
     quill.QuillController? richTextController,
+    bool? isComposite,
+    CompositeComponent? compositeComponent,
+    String? parentSectionId,
   }) {
     return EditableComponent(
       id: id ?? this.id,
@@ -101,6 +111,37 @@ class EditableComponent {
       isSelected: isSelected ?? this.isSelected,
       order: order ?? this.order,
       richTextController: richTextController ?? this.richTextController,
+      isComposite: isComposite ?? this.isComposite,
+      compositeComponent: compositeComponent ?? this.compositeComponent,
+      parentSectionId: parentSectionId ?? this.parentSectionId,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'component': component.toJson(),
+      'isExpanded': isExpanded,
+      'isSelected': isSelected,
+      'order': order,
+      'isComposite': isComposite,
+      'compositeComponent': compositeComponent?.toJson(),
+      'parentSectionId': parentSectionId,
+    };
+  }
+
+  factory EditableComponent.fromJson(Map<String, dynamic> json) {
+    return EditableComponent(
+      id: json['id'],
+      component: UIComponent.fromJson(json['component']),
+      isExpanded: json['isExpanded'] ?? false,
+      isSelected: json['isSelected'] ?? false,
+      order: json['order'],
+      isComposite: json['isComposite'] ?? false,
+      compositeComponent: json['compositeComponent'] != null
+          ? CompositeComponent.fromJson(json['compositeComponent'])
+          : null,
+      parentSectionId: json['parentSectionId'],
     );
   }
 }
@@ -416,106 +457,8 @@ class ComponentTemplateLibrary {
     ),
     
     // Logic Components
-    ComponentTemplate(
-      id: 'if-block',
-      name: 'IF Block',
-      description: 'Conditional execution block',
-      icon: Icons.code,
-      category: ComponentCategory.logic,
-      type: ComponentType.ifBlock,
-      defaultProperties: {
-        'condition': '',
-        'children': [],
-      },
-      editableProperties: [
-        ComponentProperty(
-          key: 'condition',
-          label: 'Condition',
-          type: PropertyType.expression,
-          required: true,
-        ),
-      ],
-    ),
-    ComponentTemplate(
-      id: 'else-block',
-      name: 'ELSE Block',
-      description: 'Alternative execution block',
-      icon: Icons.swap_horiz,
-      category: ComponentCategory.logic,
-      type: ComponentType.elseBlock,
-      defaultProperties: {
-        'children': [],
-      },
-      editableProperties: [],
-    ),
-    ComponentTemplate(
-      id: 'else-if-block',
-      name: 'ELSE IF Block',
-      description: 'Conditional alternative block',
-      icon: Icons.alt_route,
-      category: ComponentCategory.logic,
-      type: ComponentType.elseIfBlock,
-      defaultProperties: {
-        'condition': '',
-        'children': [],
-      },
-      editableProperties: [
-        ComponentProperty(
-          key: 'condition',
-          label: 'Condition',
-          type: PropertyType.expression,
-          required: true,
-        ),
-      ],
-    ),
-    ComponentTemplate(
-      id: 'for-loop',
-      name: 'FOR Loop',
-      description: 'Iterate over a collection',
-      icon: Icons.repeat,
-      category: ComponentCategory.logic,
-      type: ComponentType.forLoop,
-      defaultProperties: {
-        'iteratorVariable': 'item',
-        'collection': '',
-        'children': [],
-      },
-      editableProperties: [
-        ComponentProperty(
-          key: 'iteratorVariable',
-          label: 'Iterator Variable',
-          type: PropertyType.text,
-          defaultValue: 'item',
-          required: true,
-        ),
-        ComponentProperty(
-          key: 'collection',
-          label: 'Collection',
-          type: PropertyType.variable,
-          required: true,
-        ),
-      ],
-    ),
-    ComponentTemplate(
-      id: 'while-loop',
-      name: 'WHILE Loop',
-      description: 'Loop while condition is true',
-      icon: Icons.loop,
-      category: ComponentCategory.logic,
-      type: ComponentType.whileLoop,
-      defaultProperties: {
-        'condition': '',
-        'children': [],
-      },
-      editableProperties: [
-        ComponentProperty(
-          key: 'condition',
-          label: 'Loop Condition',
-          type: PropertyType.expression,
-          required: true,
-        ),
-      ],
-    ),
+    // Individual logic blocks have been replaced by composite components
+    // Use IF-ELSE, SWITCH-CASE, FOR-EACH, etc. from the ADD LOGIC button
     
     // Prompt Components
     ComponentTemplate(
@@ -578,6 +521,52 @@ class ComponentTemplateLibrary {
           label: 'Task Description',
           type: PropertyType.richText,
           required: true,
+        ),
+      ],
+    ),
+    
+    // Enhanced dropdown that can link to SWITCH-CASE
+    ComponentTemplate(
+      id: 'enhanced-dropdown',
+      name: 'Enhanced Dropdown',
+      description: 'Dropdown with SWITCH-CASE support',
+      icon: Icons.arrow_drop_down_circle,
+      category: ComponentCategory.selection,
+      type: ComponentType.dropdown,
+      defaultProperties: {
+        'label': 'Select an option',
+        'options': [
+          {'value': 'option1', 'label': 'Option 1', 'emoji': '1️⃣'},
+          {'value': 'option2', 'label': 'Option 2', 'emoji': '2️⃣'},
+          {'value': 'option3', 'label': 'Option 3', 'emoji': '3️⃣'},
+        ],
+        'enableDynamicCase': true,
+        'placeholder': 'Choose...',
+      },
+      editableProperties: [
+        ComponentProperty(
+          key: 'label',
+          label: 'Label',
+          type: PropertyType.text,
+          required: true,
+        ),
+        ComponentProperty(
+          key: 'variableName',
+          label: 'Variable Name',
+          type: PropertyType.variable,
+          required: false,
+        ),
+        ComponentProperty(
+          key: 'options',
+          label: 'Options (JSON)',
+          type: PropertyType.text,
+          required: true,
+        ),
+        ComponentProperty(
+          key: 'enableDynamicCase',
+          label: 'Link to SWITCH-CASE',
+          type: PropertyType.boolean,
+          defaultValue: false,
         ),
       ],
     ),
