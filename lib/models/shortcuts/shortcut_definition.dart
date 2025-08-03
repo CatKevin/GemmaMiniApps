@@ -293,9 +293,28 @@ enum ComponentType {
   stepIndicator,
   
   // Logic components
-  conditional,
+  conditional, // Deprecated - use ifBlock/elseBlock instead
+  ifBlock,
+  elseBlock,
+  elseIfBlock,
+  forLoop,
+  whileLoop,
   variableAssignment,
   variableTransform,
+  
+  // Integration components
+  apiCall,
+  fileOperation,
+  dataTransform,
+  jsonParser,
+  csvParser,
+  
+  // Advanced UI components
+  fileUpload,
+  imageDisplay,
+  markdown,
+  codeEditor,
+  chartDisplay,
   
   // Prompt components
   roleDefinition,

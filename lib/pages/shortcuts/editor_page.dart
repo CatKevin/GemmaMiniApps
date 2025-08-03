@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:get/get.dart';
 import '../../core/theme/controllers/theme_controller.dart';
 import '../../models/shortcuts/models.dart';
 import '../../controllers/shortcuts/editor_controller.dart';
 import '../../widgets/shortcuts/editor/widgets.dart';
+import '../../widgets/shortcuts/editor/variable_definition_section.dart';
 import '../../services/shortcuts/storage_service.dart';
+import '../routes.dart';
 
 class EditorPage extends HookWidget {
   const EditorPage({super.key});
@@ -14,25 +17,44 @@ class EditorPage extends HookWidget {
   Widget build(BuildContext context) {
     final themeController = ThemeController.to;
     
-    // Get shortcut ID from arguments
+    // Get arguments
     final args = Get.arguments as Map<String, dynamic>?;
     final shortcutId = args?['shortcutId'] as String?;
+    final basicInfo = args?['basicInfo'] as Map<String, dynamic>?;
     
     // State management
     final existingShortcut = useState<ShortcutDefinition?>(null);
     final isLoadingShortcut = useState(false);
-    final shortcutName = useState('');
-    final shortcutDescription = useState('');
-    final selectedCategory = useState<ShortcutCategory>(ShortcutCategory.other);
-    final selectedIcon = useState<ShortcutIcon>(ShortcutIcon.defaultIcon);
+    final shortcutName = useState(basicInfo?['name'] ?? '');
+    final shortcutDescription = useState(basicInfo?['description'] ?? '');
+    final selectedCategory = useState<ShortcutCategory>(
+      basicInfo?['category'] != null 
+          ? ShortcutCategory.fromString(basicInfo!['category'])
+          : ShortcutCategory.other
+    );
+    final selectedIcon = useState<ShortcutIcon>(
+      basicInfo != null && basicInfo['icon'] != null
+          ? ShortcutIcon(
+              iconData: basicInfo['icon'] as IconData,
+              color: basicInfo['color'] as Color?,
+            )
+          : ShortcutIcon.defaultIcon
+    );
+    final variables = useState<List<Variable>>([]);
 
     // Initialize controller
     final controller = Get.put(EditorController());
 
-    // Create text controllers at the top level
-    final nameController = useTextEditingController(text: shortcutName.value);
-    final descriptionController =
-        useTextEditingController(text: shortcutDescription.value);
+    // Check if we have basic info
+    useEffect(() {
+      if (shortcutId == null && basicInfo == null) {
+        // Redirect to basic info page if no info provided
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Get.offNamed(Routes.shortcutsBasicInfo);
+        });
+      }
+      return null;
+    }, []);
 
     // Load shortcut if editing
     useEffect(() {
@@ -56,43 +78,37 @@ class EditorPage extends HookWidget {
       return null;
     }, [shortcutId]);
 
-    // Sync text controllers with state
-    useEffect(() {
-      nameController.text = shortcutName.value;
-      return null;
-    }, [shortcutName.value]);
-
-    useEffect(() {
-      descriptionController.text = shortcutDescription.value;
-      return null;
-    }, [shortcutDescription.value]);
+    // Handle variable updates
+    void handleAddVariable(Variable variable) {
+      final updatedVars = List<Variable>.from(variables.value);
+      updatedVars.add(variable);
+      variables.value = updatedVars;
+      controller.updateVariables(updatedVars);
+    }
+    
+    void handleUpdateVariable(Variable variable) {
+      final updatedVars = variables.value.map((v) {
+        return v.id == variable.id ? variable : v;
+      }).toList();
+      variables.value = updatedVars;
+      controller.updateVariables(updatedVars);
+    }
+    
+    void handleDeleteVariable(String variableId) {
+      final updatedVars = variables.value
+          .where((v) => v.id != variableId)
+          .toList();
+      variables.value = updatedVars;
+      controller.updateVariables(updatedVars);
+    }
 
     void handleSave() async {
-      if (shortcutName.value.isEmpty) {
-        Get.snackbar(
-          'Error',
-          'Please enter a shortcut name',
-          backgroundColor: themeController.currentThemeConfig.error,
-          colorText: themeController.currentThemeConfig.onError,
-        );
-        return;
-      }
-
-      if (shortcutDescription.value.isEmpty) {
-        Get.snackbar(
-          'Error',
-          'Please enter a description',
-          backgroundColor: themeController.currentThemeConfig.error,
-          colorText: themeController.currentThemeConfig.onError,
-        );
-        return;
-      }
-
       final success = await controller.saveShortcut(
         name: shortcutName.value,
         description: shortcutDescription.value,
         category: selectedCategory.value.name,
         icon: selectedIcon.value,
+        variables: variables.value,
       );
 
       if (success) {
@@ -164,8 +180,38 @@ class EditorPage extends HookWidget {
       },
       child: Scaffold(
         appBar: AppBar(
-          title:
-              Text(existingShortcut.value != null ? 'EDIT SHORTCUT' : 'NEW SHORTCUT'),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                shortcutName.value.isNotEmpty 
+                    ? shortcutName.value 
+                    : (existingShortcut.value != null ? 'EDIT SHORTCUT' : 'NEW SHORTCUT'),
+                style: const TextStyle(fontSize: 18),
+              ),
+              if (shortcutDescription.value.isNotEmpty)
+                Text(
+                  shortcutDescription.value,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: themeController.currentThemeConfig.onBackground
+                        .withValues(alpha: 0.6),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+            ],
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (existingShortcut.value != null) {
+                Get.back();
+              } else {
+                Routes.toShortcutsBasicInfo();
+              }
+            },
+          ),
           actions: [
             Obx(() => TextButton(
                   onPressed: controller.hasUnsavedChanges ? handleSave : null,
@@ -191,166 +237,63 @@ class EditorPage extends HookWidget {
 
           return Column(
             children: [
-              // Basic info section
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: theme.surface,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: theme.onSurface.withValues(alpha: 0.1),
-                    ),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: nameController,
-                      onChanged: (value) {
-                        shortcutName.value = value;
-                        controller.updateMetadata(name: value);
-                      },
-                      style: TextStyle(
-                        color: theme.onSurface,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      decoration: InputDecoration(
-                        labelText: 'Shortcut Name',
-                        labelStyle: TextStyle(
-                          color: theme.onSurface.withValues(alpha: 0.5),
-                        ),
-                        enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                            color: theme.onSurface.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                            color: theme.primary,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: descriptionController,
-                      onChanged: (value) {
-                        shortcutDescription.value = value;
-                        controller.updateMetadata(description: value);
-                      },
-                      style: TextStyle(
-                        color: theme.onSurface,
-                      ),
-                      decoration: InputDecoration(
-                        labelText: 'Description',
-                        labelStyle: TextStyle(
-                          color: theme.onSurface.withValues(alpha: 0.5),
-                        ),
-                        enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                            color: theme.onSurface.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                            color: theme.primary,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<ShortcutCategory>(
-                      value: selectedCategory.value,
-                      onChanged: (value) {
-                        if (value != null) {
-                          selectedCategory.value = value;
-                          controller.updateMetadata(category: value.name);
-                        }
-                      },
-                      style: TextStyle(
-                        color: theme.onSurface,
-                      ),
-                      dropdownColor: theme.surface,
-                      decoration: InputDecoration(
-                        labelText: 'Category',
-                        labelStyle: TextStyle(
-                          color: theme.onSurface.withValues(alpha: 0.5),
-                        ),
-                        enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                            color: theme.onSurface.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                            color: theme.primary,
-                          ),
-                        ),
-                      ),
-                      items: ShortcutCategory.values.map((category) {
-                        return DropdownMenuItem(
-                          value: category,
-                          child: Row(
-                            children: [
-                              Icon(
-                                category.icon,
-                                size: 20,
-                                color: theme.onSurface,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(category.displayName),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-              ),
-
               // Components list
               Expanded(
-                child: session.components.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.widgets_outlined,
-                              size: 64,
-                              color: theme.onBackground.withValues(alpha: 0.3),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No components yet',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .displaySmall
-                                  ?.copyWith(
-                                    color: theme.onBackground
-                                        .withValues(alpha: 0.5),
-                                  ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Add components to build your shortcut',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: theme.onBackground
-                                        .withValues(alpha: 0.3),
-                                  ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ReorderableListView.builder(
+                child: SingleChildScrollView(
                         padding: const EdgeInsets.only(bottom: 80),
-                        itemCount: session.components.length,
-                        onReorder: controller.reorderComponents,
-                        itemBuilder: (context, index) {
+                        child: Column(
+                          children: [
+                            // Variable definition section (always first)
+                            VariableDefinitionSection(
+                              variables: variables.value,
+                              onAddVariable: handleAddVariable,
+                              onUpdateVariable: handleUpdateVariable,
+                              onDeleteVariable: handleDeleteVariable,
+                              onVariableSelected: (variableId) {
+                                Get.snackbar(
+                                  'Variable Selected',
+                                  'Use {{$variableId}} to reference this variable',
+                                  snackPosition: SnackPosition.TOP,
+                                  duration: const Duration(seconds: 2),
+                                );
+                              },
+                            ),
+                            
+                            // Components list
+                            session.components.isEmpty
+                              ? Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 60),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.add_circle_outline,
+                                        size: 64,
+                                        color: theme.onBackground.withValues(alpha: 0.2),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'No workflow components yet',
+                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                          color: theme.onBackground.withValues(alpha: 0.4),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Click the button below to add components',
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: theme.onBackground.withValues(alpha: 0.3),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : ReorderableListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  padding: EdgeInsets.zero,
+                                  itemCount: session.components.length,
+                                  onReorder: controller.reorderComponents,
+                                  itemBuilder: (context, index) {
                           final component = session.components[index];
                           final template = ComponentTemplateLibrary.getTemplate(
                             component.component.type,
@@ -361,6 +304,8 @@ class EditorPage extends HookWidget {
                             children: [
                               _ComponentListItem(
                                 component: component,
+                                index: index,
+                                totalCount: session.components.length,
                                 onExpand: () {
                                   controller
                                       .toggleComponentExpansion(component.id);
@@ -368,6 +313,14 @@ class EditorPage extends HookWidget {
                                 onDelete: () {
                                   controller.removeComponent(component.id);
                                 },
+                                onMoveUp: index > 0 ? () {
+                                  HapticFeedback.lightImpact();
+                                  controller.reorderComponents(index, index - 1);
+                                } : null,
+                                onMoveDown: index < session.components.length - 1 ? () {
+                                  HapticFeedback.lightImpact();
+                                  controller.reorderComponents(index, index + 1);
+                                } : null,
                               ),
                               if (component.isExpanded && template != null)
                                 ComponentPropertyEditor(
@@ -385,10 +338,13 @@ class EditorPage extends HookWidget {
                             ],
                           );
                         },
+                              ),
+                          ],
+                        ),
                       ),
               ),
-
-              // Add component button
+              
+              // Add component button at the bottom
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -426,13 +382,21 @@ class EditorPage extends HookWidget {
 
 class _ComponentListItem extends StatelessWidget {
   final EditableComponent component;
+  final int index;
+  final int totalCount;
   final VoidCallback onExpand;
   final VoidCallback onDelete;
+  final VoidCallback? onMoveUp;
+  final VoidCallback? onMoveDown;
 
   const _ComponentListItem({
     required this.component,
+    required this.index,
+    required this.totalCount,
     required this.onExpand,
     required this.onDelete,
+    this.onMoveUp,
+    this.onMoveDown,
   });
 
   @override
@@ -448,44 +412,140 @@ class _ComponentListItem extends StatelessWidget {
           color: theme.onSurface.withValues(alpha: 0.1),
         ),
       ),
-      child: ListTile(
-        leading: Icon(
-          _getComponentIcon(component.component.type),
-          color: theme.primary,
-        ),
-        title: Text(
-          _getComponentTitle(component.component),
-          style: TextStyle(
-            color: theme.onSurface,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        subtitle: Text(
-          _getComponentSubtitle(component.component),
-          style: TextStyle(
-            color: theme.onSurface.withValues(alpha: 0.6),
-            fontSize: 12,
-          ),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: Icon(
-                component.isExpanded ? Icons.expand_less : Icons.expand_more,
-                color: theme.onSurface.withValues(alpha: 0.5),
-              ),
-              onPressed: onExpand,
+      child: Column(
+        children: [
+          ListTile(
+            leading: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.drag_handle,
+                  color: theme.onSurface.withValues(alpha: 0.3),
+                  size: 20,
+                ),
+                const SizedBox(height: 4),
+                Icon(
+                  _getComponentIcon(component.component.type),
+                  color: theme.primary,
+                ),
+              ],
             ),
-            IconButton(
-              icon: Icon(
-                Icons.delete_outline,
-                color: theme.error,
+            title: Text(
+              _getComponentTitle(component.component),
+              style: TextStyle(
+                color: theme.onSurface,
+                fontWeight: FontWeight.w500,
               ),
-              onPressed: onDelete,
             ),
-          ],
-        ),
+            subtitle: Text(
+              _getComponentSubtitle(component.component),
+              style: TextStyle(
+                color: theme.onSurface.withValues(alpha: 0.6),
+                fontSize: 12,
+              ),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Quick move buttons
+                if (onMoveUp != null || onMoveDown != null) ...[
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: theme.background,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        InkWell(
+                          onTap: onMoveUp,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(8),
+                            bottomLeft: Radius.circular(8),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            child: Icon(
+                              Icons.arrow_upward,
+                              size: 16,
+                              color: onMoveUp != null 
+                                  ? theme.onSurface.withValues(alpha: 0.6)
+                                  : theme.onSurface.withValues(alpha: 0.2),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 16,
+                          color: theme.onSurface.withValues(alpha: 0.1),
+                        ),
+                        InkWell(
+                          onTap: onMoveDown,
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(8),
+                            bottomRight: Radius.circular(8),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            child: Icon(
+                              Icons.arrow_downward,
+                              size: 16,
+                              color: onMoveDown != null 
+                                  ? theme.onSurface.withValues(alpha: 0.6)
+                                  : theme.onSurface.withValues(alpha: 0.2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                IconButton(
+                  icon: Icon(
+                    component.isExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: theme.onSurface.withValues(alpha: 0.5),
+                  ),
+                  onPressed: onExpand,
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: theme.error,
+                  ),
+                  onPressed: onDelete,
+                ),
+              ],
+            ),
+          ),
+          // Position indicator
+          if (index == 0 || index == totalCount - 1)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      index == 0 ? 'First' : 'Last',
+                      style: TextStyle(
+                        color: theme.primary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }

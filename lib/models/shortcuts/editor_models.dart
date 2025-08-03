@@ -417,21 +417,100 @@ class ComponentTemplateLibrary {
     
     // Logic Components
     ComponentTemplate(
-      id: 'conditional',
-      name: 'If Condition',
-      description: 'Conditional logic',
-      icon: Icons.alt_route,
+      id: 'if-block',
+      name: 'IF Block',
+      description: 'Conditional execution block',
+      icon: Icons.code,
       category: ComponentCategory.logic,
-      type: ComponentType.conditional,
+      type: ComponentType.ifBlock,
       defaultProperties: {
         'condition': '',
-        'trueComponents': [],
-        'falseComponents': [],
+        'children': [],
       },
       editableProperties: [
         ComponentProperty(
           key: 'condition',
           label: 'Condition',
+          type: PropertyType.expression,
+          required: true,
+        ),
+      ],
+    ),
+    ComponentTemplate(
+      id: 'else-block',
+      name: 'ELSE Block',
+      description: 'Alternative execution block',
+      icon: Icons.swap_horiz,
+      category: ComponentCategory.logic,
+      type: ComponentType.elseBlock,
+      defaultProperties: {
+        'children': [],
+      },
+      editableProperties: [],
+    ),
+    ComponentTemplate(
+      id: 'else-if-block',
+      name: 'ELSE IF Block',
+      description: 'Conditional alternative block',
+      icon: Icons.alt_route,
+      category: ComponentCategory.logic,
+      type: ComponentType.elseIfBlock,
+      defaultProperties: {
+        'condition': '',
+        'children': [],
+      },
+      editableProperties: [
+        ComponentProperty(
+          key: 'condition',
+          label: 'Condition',
+          type: PropertyType.expression,
+          required: true,
+        ),
+      ],
+    ),
+    ComponentTemplate(
+      id: 'for-loop',
+      name: 'FOR Loop',
+      description: 'Iterate over a collection',
+      icon: Icons.repeat,
+      category: ComponentCategory.logic,
+      type: ComponentType.forLoop,
+      defaultProperties: {
+        'iteratorVariable': 'item',
+        'collection': '',
+        'children': [],
+      },
+      editableProperties: [
+        ComponentProperty(
+          key: 'iteratorVariable',
+          label: 'Iterator Variable',
+          type: PropertyType.text,
+          defaultValue: 'item',
+          required: true,
+        ),
+        ComponentProperty(
+          key: 'collection',
+          label: 'Collection',
+          type: PropertyType.variable,
+          required: true,
+        ),
+      ],
+    ),
+    ComponentTemplate(
+      id: 'while-loop',
+      name: 'WHILE Loop',
+      description: 'Loop while condition is true',
+      icon: Icons.loop,
+      category: ComponentCategory.logic,
+      type: ComponentType.whileLoop,
+      defaultProperties: {
+        'condition': '',
+        'children': [],
+      },
+      editableProperties: [
+        ComponentProperty(
+          key: 'condition',
+          label: 'Loop Condition',
           type: PropertyType.expression,
           required: true,
         ),
@@ -514,4 +593,212 @@ class ComponentTemplateLibrary {
   static List<ComponentTemplate> getByCategory(ComponentCategory category) {
     return templates.where((t) => t.category == category).toList();
   }
+}
+
+/// Predefined shortcut templates
+class ShortcutTemplates {
+  static final List<ShortcutTemplate> templates = [
+    ShortcutTemplate(
+      id: 'form-collector',
+      name: 'Form Collector',
+      description: 'Collect structured information from users',
+      icon: Icons.assignment,
+      category: 'productivity',
+      components: [
+        UIComponent(
+          id: 'title',
+          type: ComponentType.titleText,
+          properties: {
+            'text': 'Please fill out the form',
+            'size': 'large',
+          },
+        ),
+        UIComponent(
+          id: 'name-input',
+          type: ComponentType.textInput,
+          properties: {
+            'label': 'Full Name',
+            'placeholder': 'Enter your full name',
+            'required': true,
+          },
+          variableBinding: 'userName',
+        ),
+        UIComponent(
+          id: 'email-input',
+          type: ComponentType.textInput,
+          properties: {
+            'label': 'Email Address',
+            'placeholder': 'your.email@example.com',
+            'required': true,
+            'validation': 'email',
+          },
+          variableBinding: 'userEmail',
+        ),
+        UIComponent(
+          id: 'reason-input',
+          type: ComponentType.multilineTextInput,
+          properties: {
+            'label': 'Reason for Contact',
+            'placeholder': 'Tell us why you are reaching out...',
+            'rows': 4,
+          },
+          variableBinding: 'contactReason',
+        ),
+      ],
+    ),
+    ShortcutTemplate(
+      id: 'decision-tree',
+      name: 'Decision Tree',
+      description: 'Guide users through a decision-making process',
+      icon: Icons.account_tree,
+      category: 'business',
+      components: [
+        UIComponent(
+          id: 'title',
+          type: ComponentType.titleText,
+          properties: {
+            'text': 'Let\'s find the best option for you',
+            'size': 'large',
+          },
+        ),
+        UIComponent(
+          id: 'budget-question',
+          type: ComponentType.singleSelect,
+          properties: {
+            'label': 'What is your budget range?',
+            'options': [r'Under $100', r'$100-$500', r'$500-$1000', r'Over $1000'],
+          },
+          variableBinding: 'budgetRange',
+        ),
+        UIComponent(
+          id: 'if-low-budget',
+          type: ComponentType.ifBlock,
+          properties: {
+            'condition': r'budgetRange == "Under $100"',
+            'children': [],
+          },
+        ),
+      ],
+    ),
+    ShortcutTemplate(
+      id: 'survey',
+      name: 'Survey Template',
+      description: 'Create a multi-question survey',
+      icon: Icons.poll,
+      category: 'research',
+      components: [
+        UIComponent(
+          id: 'title',
+          type: ComponentType.titleText,
+          properties: {
+            'text': 'Customer Satisfaction Survey',
+            'size': 'large',
+          },
+        ),
+        UIComponent(
+          id: 'description',
+          type: ComponentType.descriptionText,
+          properties: {
+            'text': 'Your feedback helps us improve our service',
+          },
+        ),
+        UIComponent(
+          id: 'rating',
+          type: ComponentType.slider,
+          properties: {
+            'label': 'How satisfied are you with our service?',
+            'min': 1,
+            'max': 10,
+            'step': 1,
+            'showLabels': true,
+          },
+          variableBinding: 'satisfactionRating',
+        ),
+        UIComponent(
+          id: 'improvements',
+          type: ComponentType.multiSelect,
+          properties: {
+            'label': 'What could we improve?',
+            'options': ['Speed', 'Quality', 'Communication', 'Price', 'Features'],
+          },
+          variableBinding: 'improvementAreas',
+        ),
+      ],
+    ),
+    ShortcutTemplate(
+      id: 'content-generator',
+      name: 'Content Generator',
+      description: 'Generate content based on user inputs',
+      icon: Icons.auto_awesome,
+      category: 'creative',
+      components: [
+        UIComponent(
+          id: 'title',
+          type: ComponentType.titleText,
+          properties: {
+            'text': 'AI Content Generator',
+            'size': 'large',
+          },
+        ),
+        UIComponent(
+          id: 'content-type',
+          type: ComponentType.dropdown,
+          properties: {
+            'label': 'What type of content do you need?',
+            'options': ['Blog Post', 'Social Media', 'Email', 'Product Description'],
+          },
+          variableBinding: 'contentType',
+        ),
+        UIComponent(
+          id: 'topic',
+          type: ComponentType.textInput,
+          properties: {
+            'label': 'Topic or Subject',
+            'placeholder': 'What should the content be about?',
+          },
+          variableBinding: 'contentTopic',
+        ),
+        UIComponent(
+          id: 'tone',
+          type: ComponentType.singleSelect,
+          properties: {
+            'label': 'Tone of Voice',
+            'options': ['Professional', 'Casual', 'Friendly', 'Formal', 'Humorous'],
+          },
+          variableBinding: 'contentTone',
+        ),
+      ],
+    ),
+  ];
+  
+  static ShortcutTemplate? getTemplate(String id) {
+    try {
+      return templates.firstWhere((t) => t.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  static List<ShortcutTemplate> getByCategory(String category) {
+    return templates.where((t) => t.category == category).toList();
+  }
+}
+
+/// Shortcut template definition
+class ShortcutTemplate {
+  final String id;
+  final String name;
+  final String description;
+  final IconData icon;
+  final String category;
+  final List<UIComponent> components;
+  
+  const ShortcutTemplate({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.icon,
+    required this.category,
+    required this.components,
+  });
 }

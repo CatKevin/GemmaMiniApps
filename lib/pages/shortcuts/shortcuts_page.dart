@@ -214,7 +214,7 @@ class ShortcutsPage extends HookWidget {
                                 shortcut: shortcut,
                                 onEdit: () {
                                   Navigator.of(context).pop();
-                                  Routes.toShortcutsEditor(shortcutId: shortcut.id);
+                                  Routes.toShortcutsBasicInfo(shortcutId: shortcut.id);
                                 },
                                 onDelete: () async {
                                   Navigator.of(context).pop();
@@ -292,7 +292,7 @@ class ShortcutsPage extends HookWidget {
       }),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Routes.toShortcutsEditor();
+          Routes.toShortcutsBasicInfo();
         },
         backgroundColor: themeController.currentThemeConfig.primary,
         child: Icon(

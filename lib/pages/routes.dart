@@ -4,6 +4,7 @@ import 'chat/chat_page.dart';
 import 'shortcuts/shortcuts_page.dart';
 import 'shortcuts/runtime_page.dart';
 import 'shortcuts/editor_page.dart';
+import 'shortcuts/basic_info_page.dart';
 
 // Route name constants
 abstract class Routes {
@@ -15,6 +16,7 @@ abstract class Routes {
   // Shortcuts routes
   static const String shortcuts = '/shortcuts';
   static const String shortcutsList = '/shortcuts/list';
+  static const String shortcutsBasicInfo = '/shortcuts/basic-info';
   static const String shortcutsRuntime = '/shortcuts/runtime';
   static const String shortcutsEditor = '/shortcuts/editor';
   
@@ -37,12 +39,20 @@ abstract class Routes {
     }
   }
   
-  static void toShortcutsEditor({String? shortcutId}) {
+  static void toShortcutsBasicInfo({String? shortcutId}) {
     if (shortcutId != null) {
-      Get.toNamed(shortcutsEditor, arguments: {'shortcutId': shortcutId});
+      Get.toNamed(shortcutsBasicInfo, arguments: {'shortcutId': shortcutId});
     } else {
-      Get.toNamed(shortcutsEditor);
+      Get.toNamed(shortcutsBasicInfo);
     }
+  }
+  
+  static void toShortcutsEditor({String? shortcutId, Map<String, dynamic>? basicInfo}) {
+    final args = <String, dynamic>{};
+    if (shortcutId != null) args['shortcutId'] = shortcutId;
+    if (basicInfo != null) args['basicInfo'] = basicInfo;
+    
+    Get.toNamed(shortcutsEditor, arguments: args.isNotEmpty ? args : null);
   }
   
   // Navigation with replacement (removes current route)
@@ -100,6 +110,12 @@ class AppPages {
     GetPage(
       name: Routes.shortcutsRuntime,
       page: () => const RuntimePage(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 200),
+    ),
+    GetPage(
+      name: Routes.shortcutsBasicInfo,
+      page: () => const BasicInfoPage(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 200),
     ),

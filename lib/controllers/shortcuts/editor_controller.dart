@@ -288,12 +288,58 @@ class EditorController extends GetxController {
     );
   }
   
+  /// Update variables in the editor session
+  void updateVariables(List<Variable> variables) {
+    if (session.value == null) return;
+    
+    // Convert to Map<String, VariableDefinition>
+    final variableDefinitions = <String, VariableDefinition>{};
+    for (final variable in variables) {
+      variableDefinitions[variable.id] = VariableDefinition(
+        name: variable.name,
+        type: _convertVariableType(variable.type),
+        defaultValue: variable.value,
+        description: variable.description,
+      );
+    }
+    
+    session.value = session.value!.copyWith(
+      variables: variableDefinitions,
+      hasUnsavedChanges: true,
+    );
+  }
+  
+  /// Convert between variable type enums
+  VariableType _convertVariableType(dynamic type) {
+    // Handle conversion between different VariableType enums if needed
+    final typeName = type.toString().split('.').last;
+    switch (typeName) {
+      case 'string':
+      case 'text':
+        return VariableType.string;
+      case 'number':
+        return VariableType.number;
+      case 'boolean':
+        return VariableType.boolean;
+      case 'date':
+        return VariableType.date;
+      case 'list':
+        return VariableType.list;
+      case 'map':
+      case 'object':
+        return VariableType.map;
+      default:
+        return VariableType.string;
+    }
+  }
+  
   /// Save the shortcut
   Future<bool> saveShortcut({
     required String name,
     required String description,
     required String category,
     required ShortcutIcon icon,
+    List<Variable>? variables,
   }) async {
     if (session.value == null || _storageService == null) return false;
     

@@ -502,7 +502,7 @@ class _DateTimePickerComponent extends HookWidget {
     final required = component.properties['required'] ?? false;
     final includeTime = component.properties['includeTime'] ?? false;
 
-    Future<void> _selectDate() async {
+    Future<void> selectDate() async {
       final date = await showDatePicker(
         context: context,
         initialDate: selectedDate.value ?? DateTime.now(),
@@ -511,7 +511,7 @@ class _DateTimePickerComponent extends HookWidget {
       );
 
       if (date != null) {
-        if (includeTime) {
+        if (includeTime && context.mounted) {
           final time = await showTimePicker(
             context: context,
             initialTime:
@@ -550,7 +550,7 @@ class _DateTimePickerComponent extends HookWidget {
         ),
         const SizedBox(height: 8),
         InkWell(
-          onTap: _selectDate,
+          onTap: selectDate,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
@@ -1447,7 +1447,7 @@ class _StepIndicatorComponent extends StatelessWidget {
       child: Row(
         children: steps.asMap().entries.map((entry) {
           final index = entry.key;
-          final step = entry.value.toString();
+          // final step = entry.value.toString(); // Currently unused
           final isActive = index == currentStep;
           final isCompleted = index < currentStep;
 
