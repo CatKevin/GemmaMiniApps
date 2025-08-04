@@ -734,16 +734,62 @@ class EditorPage extends HookWidget {
                 ],
               ),
               
-              // Floating Action Button
+              // Ultra-Premium Floating Action Button
               Positioned(
-                bottom: 16,
-                right: 16,
-                child: FloatingActionButton.extended(
-                  onPressed: handleAddComponent,
-                  icon: const Icon(Icons.add),
-                  label: const Text('ADD COMPONENT'),
-                  backgroundColor: theme.primary,
-                  foregroundColor: theme.onPrimary,
+                bottom: 24,
+                right: 24,
+                child: GestureDetector(
+                  onTap: handleAddComponent,
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: theme.primary, // White color
+                      boxShadow: [
+                        // Outer glow
+                        BoxShadow(
+                          color: theme.primary.withValues(alpha: 0.15),
+                          blurRadius: 20,
+                          offset: const Offset(0, 0),
+                          spreadRadius: 2,
+                        ),
+                        // Main shadow
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.25),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                          spreadRadius: -2,
+                        ),
+                        // Inner shadow for depth
+                        BoxShadow(
+                          color: theme.primary.withValues(alpha: 0.1),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                      border: Border.all(
+                        width: 1.5,
+                        color: theme.primary.withValues(alpha: 0.3), // More visible border on white
+                      ),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: handleAddComponent,
+                        customBorder: const CircleBorder(),
+                        splashColor: theme.surface.withValues(alpha: 0.3),
+                        highlightColor: theme.surface.withValues(alpha: 0.2),
+                        child: Center(
+                          child: Icon(
+                            Icons.add,
+                            color: theme.surface, // Dark icon on white background
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
