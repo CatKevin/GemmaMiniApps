@@ -497,6 +497,72 @@ class EditorController extends GetxController {
     }
   }
   
+  /// Move component directly between sections
+  void moveComponentBetweenSections(String componentId, String sourceSectionId, String targetSectionId, int targetIndex) {
+    if (session.value == null) return;
+    
+    EditableComponent? componentToMove;
+    
+    // Find and remove component from source section
+    for (var comp in session.value!.components) {
+      if (comp.isComposite && comp.compositeComponent != null) {
+        final sourceSection = comp.compositeComponent!.sections
+            .firstWhereOrNull((s) => s.id == sourceSectionId);
+        
+        if (sourceSection != null) {
+          final componentIndex = sourceSection.children.indexWhere((c) => c.id == componentId);
+          if (componentIndex != -1) {
+            componentToMove = sourceSection.children[componentIndex];
+            sourceSection.children.removeAt(componentIndex);
+            
+            // Update order values in source section
+            for (int i = 0; i < sourceSection.children.length; i++) {
+              sourceSection.children[i] = sourceSection.children[i].copyWith(order: i);
+            }
+            break;
+          }
+        }
+      }
+    }
+    
+    // Add component to target section
+    if (componentToMove != null) {
+      for (var comp in session.value!.components) {
+        if (comp.isComposite && comp.compositeComponent != null) {
+          final targetSection = comp.compositeComponent!.sections
+              .firstWhereOrNull((s) => s.id == targetSectionId);
+          
+          if (targetSection != null) {
+            // Update component's parent section ID
+            final movedComponent = componentToMove.copyWith(
+              parentSectionId: targetSectionId,
+              order: targetIndex,
+            );
+            
+            // Insert at target position
+            if (targetIndex >= targetSection.children.length) {
+              targetSection.children.add(movedComponent);
+            } else {
+              targetSection.children.insert(targetIndex, movedComponent);
+            }
+            
+            // Update order values in target section
+            for (int i = 0; i < targetSection.children.length; i++) {
+              targetSection.children[i] = targetSection.children[i].copyWith(order: i);
+            }
+            
+            // Force UI update
+            session.value = session.value!.copyWith(
+              hasUnsavedChanges: true,
+              lastModified: DateTime.now(),
+            );
+            break;
+          }
+        }
+      }
+    }
+  }
+  
   /// Update component property
   void updateComponentProperty(String componentId, String key, dynamic value) {
     if (session.value == null) return;

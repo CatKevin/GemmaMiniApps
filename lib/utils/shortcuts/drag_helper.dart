@@ -38,8 +38,8 @@ class DragHelper {
         return false;
         
       case DragType.sectionContent:
-        // Section content can be dropped within the same section OR to the main list
-        return draggedItem.parentSectionId == targetSectionId || targetSectionId == null;
+        // Section content can be dropped anywhere (same section, different section, or main list)
+        return true;
         
       case DragType.component:
         // Regular components can be dropped in main list or composite sections

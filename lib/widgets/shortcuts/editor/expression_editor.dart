@@ -41,10 +41,25 @@ class ExpressionEditor extends HookWidget {
       return null;
     }, []);
     
+    // Check if operator requires a value
+    bool requiresValue(String operator) {
+      return !['isEmpty', 'isNotEmpty', 'isNull', 'isNotNull', 'isTrue', 'isFalse'].contains(operator);
+    }
+
     // Update expression when components change
     void updateExpression() {
-      if (selectedVariable.value != null && valueController.text.isNotEmpty) {
-        final expression = '${selectedVariable.value} ${selectedOperator.value} ${valueController.text}';
+      if (selectedVariable.value != null) {
+        String expression;
+        if (requiresValue(selectedOperator.value)) {
+          if (valueController.text.isNotEmpty) {
+            expression = '${selectedVariable.value} ${selectedOperator.value} ${valueController.text}';
+          } else {
+            return; // Don't update if value is required but empty
+          }
+        } else {
+          // For operators that don't require a value
+          expression = '${selectedVariable.value} ${selectedOperator.value}';
+        }
         controller.text = expression;
         onChanged(expression);
       }
@@ -73,12 +88,11 @@ class ExpressionEditor extends HookWidget {
             borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Variable selector
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
+              DropdownButtonFormField<String>(
+                      isExpanded: true,
                       value: selectedVariable.value,
                       decoration: InputDecoration(
                         labelText: 'Variable',
@@ -140,12 +154,13 @@ class ExpressionEditor extends HookWidget {
                         updateExpression();
                       },
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Operator selector
-                  SizedBox(
-                    width: 100,
+              const SizedBox(height: 8),
+              // Operator selector in a new row
+              Row(
+                children: [
+                  Expanded(
                     child: DropdownButtonFormField<String>(
+                      isExpanded: true,
                       value: selectedOperator.value,
                       decoration: InputDecoration(
                         labelText: 'Operator',
@@ -182,70 +197,79 @@ class ExpressionEditor extends HookWidget {
                       items: _getOperators().map((op) {
                         return DropdownMenuItem(
                           value: op['value'] as String,
-                          child: Text(op['label'] as String),
+                          child: Text(
+                            op['label'] as String,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         );
                       }).toList(),
                       onChanged: (value) {
                         selectedOperator.value = value!;
+                        // Clear value if operator doesn't require it
+                        if (!requiresValue(value)) {
+                          valueController.clear();
+                        }
                         updateExpression();
                       },
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              // Value input
-              TextField(
-                controller: valueController,
-                onChanged: (value) {
-                  updateExpression();
-                },
-                style: TextStyle(
-                  color: context.theme.onSurface,
-                  fontSize: 14,
-                ),
-                decoration: InputDecoration(
-                  labelText: 'Value',
-                  labelStyle: TextStyle(
-                    color: context.theme.onSurface.withValues(alpha: 0.6),
-                    fontSize: 12,
-                  ),
-                  hintText: _getValueHint(selectedVariable.value),
-                  hintStyle: TextStyle(
-                    color: context.theme.onSurface.withValues(alpha: 0.3),
+              // Value input (only show if operator requires a value)
+              if (requiresValue(selectedOperator.value)) ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: valueController,
+                  onChanged: (value) {
+                    updateExpression();
+                  },
+                  style: TextStyle(
+                    color: context.theme.onSurface,
                     fontSize: 14,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    borderSide: BorderSide(
-                      color: context.theme.onSurface.withValues(alpha: 0.2),
+                  decoration: InputDecoration(
+                    labelText: 'Value',
+                    labelStyle: TextStyle(
+                      color: context.theme.onSurface.withValues(alpha: 0.6),
+                      fontSize: 12,
                     ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    borderSide: BorderSide(
-                      color: context.theme.onSurface.withValues(alpha: 0.2),
+                    hintText: _getValueHint(selectedVariable.value),
+                    hintStyle: TextStyle(
+                      color: context.theme.onSurface.withValues(alpha: 0.3),
+                      fontSize: 14,
                     ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    borderSide: BorderSide(
-                      color: context.theme.primary,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(
+                        color: context.theme.onSurface.withValues(alpha: 0.2),
+                      ),
                     ),
-                  ),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      Icons.help_outline,
-                      size: 20,
-                      color: context.theme.onSurface.withValues(alpha: 0.5),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(
+                        color: context.theme.onSurface.withValues(alpha: 0.2),
+                      ),
                     ),
-                    onPressed: () {
-                      showHelper.value = !showHelper.value;
-                    },
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(
+                        color: context.theme.primary,
+                      ),
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        Icons.help_outline,
+                        size: 20,
+                        color: context.theme.onSurface.withValues(alpha: 0.5),
+                      ),
+                      onPressed: () {
+                        showHelper.value = !showHelper.value;
+                      },
+                    ),
                   ),
                 ),
-              ),
+              ],
               const SizedBox(height: 8),
               // Raw expression display
               Container(
@@ -469,8 +493,14 @@ class ExpressionEditor extends HookWidget {
       {'value': '>=', 'label': '>='},
       {'value': '<=', 'label': '<='},
       {'value': 'contains', 'label': 'contains'},
+      {'value': 'startsWith', 'label': 'starts with'},
+      {'value': 'endsWith', 'label': 'ends with'},
       {'value': 'isEmpty', 'label': 'is empty'},
       {'value': 'isNotEmpty', 'label': 'is not empty'},
+      {'value': 'isNull', 'label': 'is null'},
+      {'value': 'isNotNull', 'label': 'is not null'},
+      {'value': 'isTrue', 'label': 'is true'},
+      {'value': 'isFalse', 'label': 'is false'},
     ];
   }
   
@@ -479,9 +509,11 @@ class ExpressionEditor extends HookWidget {
       '• age > 18',
       '• name == "John"',
       '• email contains "@gmail.com"',
-      '• message isNotEmpty',
+      '• message isEmpty',
+      '• username isNotEmpty',
       '• score >= 80',
-      '• isActive == true',
+      '• isActive isTrue',
+      '• result isNull',
     ];
   }
 }

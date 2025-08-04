@@ -4,13 +4,12 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:get/get.dart';
 import '../../../controllers/shortcuts/editor_controller.dart';
 import '../../../core/theme/controllers/theme_controller.dart';
-import '../../../models/shortcuts/composite_component.dart';
-import '../../../models/shortcuts/editor_models.dart';
-import '../../../models/shortcuts/shortcut_definition.dart';
+import '../../../models/shortcuts/models.dart';
 import '../../../models/shortcuts/variable.dart';
 import 'component_panel.dart';
 import 'property_editor.dart';
 import 'cross_container_draggable.dart';
+import 'expression_editor.dart';
 
 /// Widget for rendering composite components (IF-ELSE, SWITCH-CASE, etc.)
 class CompositeComponentWidget extends HookWidget {
@@ -162,9 +161,46 @@ class CompositeComponentWidget extends HookWidget {
   }
 
   List<Widget> _buildSections(BuildContext context, dynamic theme) {
-    return component.sections.map((section) {
+    final sections = component.sections.map((section) {
       return _buildSection(context, section, theme);
     }).toList();
+
+    // Add "Add ELSE IF" button for IF-ELSE components
+    if (component is IfElseComponent) {
+      // Find the index before the ELSE section
+      final elseIndex = component.sections.indexWhere(
+        (s) => s.type == CompositeSectionType.branch && s.label == 'ELSE'
+      );
+      
+      if (elseIndex > 0) {
+        sections.insert(elseIndex, Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Center(
+            child: TextButton.icon(
+              onPressed: () {
+                (component as IfElseComponent).addElseIf('');
+                // Don't toggle expand - just trigger a rebuild
+                (context as Element).markNeedsBuild();
+              },
+              icon: Icon(Icons.add_circle_outline, size: 20),
+              label: const Text('Add ELSE IF'),
+              style: TextButton.styleFrom(
+                foregroundColor: theme.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(
+                    color: theme.primary.withValues(alpha: 0.3),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ));
+      }
+    }
+
+    return sections;
   }
 
   Widget _buildSection(BuildContext context, ComponentSection section, dynamic theme) {
@@ -188,6 +224,16 @@ class CompositeComponentWidget extends HookWidget {
     );
     final showOptionsEditor = useState(false);
 
+    // Convert available variables to the format needed by ExpressionEditor
+    final variableDefinitions = <String, VariableDefinition>{};
+    for (var variable in availableVariables) {
+      variableDefinitions[variable.name] = VariableDefinition(
+        name: variable.name,
+        type: variable.type,
+        defaultValue: variable.value,
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         border: Border(
@@ -200,85 +246,141 @@ class CompositeComponentWidget extends HookWidget {
         children: [
           // Main condition row
           Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.help_outline,
-                  color: _getComponentColor(component.type),
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  section.label,
-                  style: TextStyle(
-                    color: _getComponentColor(component.type),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextField(
-                    controller: conditionController,
-                    style: TextStyle(color: theme.onBackground),
-                    decoration: InputDecoration(
-                      hintText: component.type == CompositeComponentType.switchCase
-                          ? 'Enter menu prompt text'
-                          : 'Enter condition expression',
-                      hintStyle: TextStyle(
-                        color: theme.onBackground.withValues(alpha: 0.4),
+            child: component.type == CompositeComponentType.ifElse
+                ? Container(
+                    decoration: BoxDecoration(
+                      color: theme.surface,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ExpansionTile(
+                      tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      childrenPadding: const EdgeInsets.all(16),
+                      leading: Icon(
+                        Icons.help_outline,
+                        color: _getComponentColor(component.type),
+                        size: 20,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: theme.onBackground.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: theme.onBackground.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
+                      title: Text(
+                        section.label,
+                        style: TextStyle(
                           color: _getComponentColor(component.type),
-                          width: 2,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
                         ),
                       ),
+                      subtitle: section.properties['expression']?.isNotEmpty == true
+                          ? Text(
+                              section.properties['expression']!,
+                              style: TextStyle(
+                                color: theme.onBackground.withValues(alpha: 0.7),
+                                fontSize: 12,
+                                fontFamily: 'monospace',
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: true,
+                            )
+                          : Text(
+                              'Click to set condition',
+                              style: TextStyle(
+                                color: theme.onBackground.withValues(alpha: 0.4),
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                      initiallyExpanded: false,
+                      children: [
+                        ExpressionEditor(
+                          initialValue: section.properties['expression'] ?? '',
+                          onChanged: (value) {
+                            section.properties['expression'] = value;
+                            if (component is IfElseComponent) {
+                              (component as IfElseComponent).conditionExpression = value;
+                            }
+                            // Trigger rebuild
+                            (context as Element).markNeedsBuild();
+                          },
+                          availableVariables: variableDefinitions,
+                          label: 'Build Condition',
+                          hint: 'Select a variable and define the condition',
+                        ),
+                      ],
                     ),
-                    onChanged: (value) {
-                      section.properties['expression'] = value;
-                      if (component is IfElseComponent) {
-                        (component as IfElseComponent).conditionExpression = value;
-                      } else if (component is SwitchCaseComponent) {
-                        (component as SwitchCaseComponent).switchVariable = value;
-                      }
-                    },
+                  )
+                : Row(
+                    children: [
+                      Icon(
+                        Icons.help_outline,
+                        color: _getComponentColor(component.type),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        section.label,
+                        style: TextStyle(
+                          color: _getComponentColor(component.type),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextField(
+                          controller: conditionController,
+                          style: TextStyle(color: theme.onBackground),
+                          decoration: InputDecoration(
+                            hintText: 'Enter menu prompt text',
+                            hintStyle: TextStyle(
+                              color: theme.onBackground.withValues(alpha: 0.4),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: theme.onBackground.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: theme.onBackground.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: _getComponentColor(component.type),
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          onChanged: (value) {
+                            section.properties['expression'] = value;
+                            if (component is SwitchCaseComponent) {
+                              (component as SwitchCaseComponent).switchVariable = value;
+                            }
+                          },
+                        ),
+                      ),
+                      // Options management button for SWITCH-CASE
+                      if (component.type == CompositeComponentType.switchCase) ...[
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: Icon(
+                            showOptionsEditor.value ? Icons.expand_less : Icons.settings,
+                            color: theme.primary,
+                          ),
+                          onPressed: () {
+                            showOptionsEditor.value = !showOptionsEditor.value;
+                          },
+                          tooltip: 'Manage options',
+                        ),
+                      ],
+                    ],
                   ),
-                ),
-                // Options management button for SWITCH-CASE
-                if (component.type == CompositeComponentType.switchCase) ...[
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: Icon(
-                      showOptionsEditor.value ? Icons.expand_less : Icons.settings,
-                      color: theme.primary,
-                    ),
-                    onPressed: () {
-                      showOptionsEditor.value = !showOptionsEditor.value;
-                    },
-                    tooltip: 'Manage options',
-                  ),
-                ],
-              ],
-            ),
           ),
           // Options editor for SWITCH-CASE
           if (component.type == CompositeComponentType.switchCase && showOptionsEditor.value)
@@ -435,6 +537,16 @@ class CompositeComponentWidget extends HookWidget {
   }
 
   Widget _buildBranchSection(ComponentSection section, dynamic theme) {
+    // Convert available variables to the format needed by ExpressionEditor
+    final variableDefinitions = <String, VariableDefinition>{};
+    for (var variable in availableVariables) {
+      variableDefinitions[variable.name] = VariableDefinition(
+        name: variable.name,
+        type: variable.type,
+        defaultValue: variable.value,
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         border: Border(
@@ -450,66 +562,127 @@ class CompositeComponentWidget extends HookWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             color: theme.surface,
-            child: Row(
+            child: Column(
               children: [
-                Icon(
-                  _getSectionIcon(section.type),
-                  size: 16,
-                  color: theme.onBackground.withValues(alpha: 0.6),
+                Row(
+                  children: [
+                    Icon(
+                      _getSectionIcon(section.type),
+                      size: 16,
+                      color: theme.onBackground.withValues(alpha: 0.6),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      section.label,
+                      style: TextStyle(
+                        color: theme.onBackground,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    if (section.type == CompositeSectionType.branch &&
+                        section.label == 'ELSE IF') ...[
+                      const Spacer(),
+                      IconButton(
+                        icon: Icon(
+                          Icons.close,
+                          size: 16,
+                          color: theme.error,
+                        ),
+                        onPressed: () {
+                          if (component is IfElseComponent) {
+                            (component as IfElseComponent).removeElseIf(section.id);
+                            onToggleExpand(); // Refresh UI
+                          }
+                        },
+                      ),
+                    ],
+                    // Delete button for CASE sections (keep at least 2 cases)
+                    if (section.type == CompositeSectionType.caseOption &&
+                        component is SwitchCaseComponent &&
+                        (component as SwitchCaseComponent).caseOptions.length > 2) ...[
+                      const Spacer(),
+                      IconButton(
+                        icon: Icon(
+                          Icons.close,
+                          size: 16,
+                          color: theme.error,
+                        ),
+                        onPressed: () {
+                          final caseValue = section.properties['value'];
+                          if (caseValue != null) {
+                            (component as SwitchCaseComponent).removeCase(caseValue);
+                            onToggleExpand(); // Refresh UI
+                          }
+                        },
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  section.label,
-                  style: TextStyle(
-                    color: theme.onBackground,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
+                // Show condition preview for ELSE IF
                 if (section.type == CompositeSectionType.branch &&
-                    section.label == 'ELSE IF') ...[
+                    section.label == 'ELSE IF' &&
+                    section.properties['expression']?.isNotEmpty == true) ...[
                   const Spacer(),
-                  IconButton(
-                    icon: Icon(
-                      Icons.close,
-                      size: 16,
-                      color: theme.error,
+                  Expanded(
+                    child: Text(
+                      section.properties['expression']!,
+                      style: TextStyle(
+                        color: theme.onBackground.withValues(alpha: 0.7),
+                        fontSize: 12,
+                        fontFamily: 'monospace',
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: true,
+                      textAlign: TextAlign.right,
                     ),
-                    onPressed: () {
-                      if (component is IfElseComponent) {
-                        (component as IfElseComponent).removeElseIf(section.id);
-                        onToggleExpand(); // Refresh UI
-                      }
-                    },
                   ),
-                ],
-                // Delete button for CASE sections (keep at least 2 cases)
-                if (section.type == CompositeSectionType.caseOption &&
-                    component is SwitchCaseComponent &&
-                    (component as SwitchCaseComponent).caseOptions.length > 2) ...[
-                  const Spacer(),
-                  IconButton(
-                    icon: Icon(
-                      Icons.close,
-                      size: 16,
-                      color: theme.error,
-                    ),
-                    onPressed: () {
-                      final caseValue = section.properties['value'];
-                      if (caseValue != null) {
-                        (component as SwitchCaseComponent).removeCase(caseValue);
-                        onToggleExpand(); // Refresh UI
-                      }
-                    },
-                  ),
+                  const SizedBox(width: 8),
                 ],
               ],
             ),
           ),
+          // Add condition editor for ELSE IF
+          if (section.type == CompositeSectionType.branch &&
+              section.label == 'ELSE IF') ...[
+            Container(
+              color: theme.surface,
+              child: ExpansionTile(
+                tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+                childrenPadding: const EdgeInsets.all(16),
+                leading: Icon(
+                  Icons.build_circle,
+                  color: theme.primary,
+                  size: 20,
+                ),
+                title: Text(
+                  'Edit Condition',
+                  style: TextStyle(
+                    color: theme.onBackground,
+                    fontSize: 14,
+                  ),
+                ),
+                initiallyExpanded: section.properties['expression']?.isEmpty ?? true,
+                children: [
+                  ExpressionEditor(
+                    initialValue: section.properties['expression'] ?? '',
+                    onChanged: (value) {
+                      section.properties['expression'] = value;
+                      // Don't need to trigger rebuild here as state will update automatically
+                    },
+                    availableVariables: variableDefinitions,
+                    label: 'Condition',
+                    hint: 'Define the condition for this ELSE IF branch',
+                  ),
+                ],
+              ),
+            ),
+          ],
           // Content area (draggable components)
           Container(
-            padding: const EdgeInsets.all(16),
-            constraints: const BoxConstraints(minHeight: 80),
+            padding: const EdgeInsets.all(12),
+            constraints: const BoxConstraints(minHeight: 50),
             child: ComponentDropTarget(
               targetSectionId: section.id,
               targetIndex: section.children.length,
@@ -527,11 +700,11 @@ class CompositeComponentWidget extends HookWidget {
                   // Reorder within same section
                   onReorderInSection(dragData.sourceIndex, targetIndex, section.id);
                 } else {
-                  // Move from another section - first move to main list, then to this section
+                  // Move from another section directly
                   final controller = Get.find<EditorController>();
-                  controller.moveComponentToMainList(dragData.component.id, 0);
-                  controller.moveComponentToSection(
+                  controller.moveComponentBetweenSections(
                     dragData.component.id,
+                    dragData.sourceSectionId!,
                     section.id,
                     targetIndex,
                   );
@@ -540,15 +713,55 @@ class CompositeComponentWidget extends HookWidget {
               showDropIndicator: section.children.isEmpty,
               child: section.children.isEmpty
                   ? _buildEmptyPlaceholder(section, theme)
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: section.children.length,
-                      itemBuilder: (context, index) {
-                        final child = section.children[index];
-                        return ComponentDropTarget(
+                  : Column(
+                      children: [
+                        // Existing components
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: section.children.length,
+                          itemBuilder: (context, index) {
+                            final child = section.children[index];
+                            return ComponentDropTarget(
+                              targetSectionId: section.id,
+                              targetIndex: index,
+                              onAccept: (dragData, targetIndex) {
+                                // Handle drop from main list to section
+                                if (dragData.sourceSectionId == null) {
+                                  // Component is from main list
+                                  final controller = Get.find<EditorController>();
+                                  controller.moveComponentToSection(
+                                    dragData.component.id,
+                                    section.id,
+                                    targetIndex,
+                                  );
+                                } else if (dragData.sourceSectionId == section.id) {
+                                  // Reorder within same section
+                                  onReorderInSection(dragData.sourceIndex, targetIndex, section.id);
+                                } else {
+                                  // Move from another section directly
+                                  final controller = Get.find<EditorController>();
+                                  controller.moveComponentBetweenSections(
+                                    dragData.component.id,
+                                    dragData.sourceSectionId!,
+                                    section.id,
+                                    targetIndex,
+                                  );
+                                }
+                              },
+                              child: _buildDraggableChild(
+                                child,
+                                section,
+                                index,
+                                theme,
+                              ),
+                            );
+                          },
+                        ),
+                        // Drop zone at the end
+                        ComponentDropTarget(
                           targetSectionId: section.id,
-                          targetIndex: index,
+                          targetIndex: section.children.length,
                           onAccept: (dragData, targetIndex) {
                             // Handle drop from main list to section
                             if (dragData.sourceSectionId == null) {
@@ -557,30 +770,45 @@ class CompositeComponentWidget extends HookWidget {
                               controller.moveComponentToSection(
                                 dragData.component.id,
                                 section.id,
-                                targetIndex,
+                                section.children.length,
                               );
                             } else if (dragData.sourceSectionId == section.id) {
                               // Reorder within same section
-                              onReorderInSection(dragData.sourceIndex, targetIndex, section.id);
+                              onReorderInSection(dragData.sourceIndex, section.children.length, section.id);
                             } else {
-                              // Move from another section - first move to main list, then to this section
+                              // Move from another section directly
                               final controller = Get.find<EditorController>();
-                              controller.moveComponentToMainList(dragData.component.id, 0);
-                              controller.moveComponentToSection(
+                              controller.moveComponentBetweenSections(
                                 dragData.component.id,
+                                dragData.sourceSectionId!,
                                 section.id,
-                                targetIndex,
+                                section.children.length,
                               );
                             }
                           },
-                          child: _buildDraggableChild(
-                            child,
-                            section,
-                            index,
-                            theme,
+                          showDropIndicator: true,
+                          child: Container(
+                            margin: const EdgeInsets.only(top: 8),
+                            child: Center(
+                              child: TextButton.icon(
+                                onPressed: () => _showAddComponentDialog(section),
+                                icon: Icon(Icons.add_circle_outline, size: 20),
+                                label: const Text('Add Component'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: theme.primary,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    side: BorderSide(
+                                      color: theme.primary.withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                        );
-                      },
+                        ),
+                      ],
                     ),
             ),
           ),
@@ -616,12 +844,12 @@ class CompositeComponentWidget extends HookWidget {
     return GestureDetector(
       onTap: () => _showAddComponentDialog(section),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 24),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           border: Border.all(
             color: theme.onBackground.withValues(alpha: 0.1),
             style: BorderStyle.solid,
-            width: 2,
+            width: 1,
           ),
           borderRadius: BorderRadius.circular(8),
         ),
@@ -635,7 +863,7 @@ class CompositeComponentWidget extends HookWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              'Drop components here or tap to add',
+              'Add',
               style: TextStyle(
                 color: theme.onBackground.withValues(alpha: 0.3),
                 fontSize: 12,
