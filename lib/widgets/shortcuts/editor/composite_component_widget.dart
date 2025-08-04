@@ -6,7 +6,7 @@ import '../../../controllers/shortcuts/editor_controller.dart';
 import '../../../core/theme/controllers/theme_controller.dart';
 import '../../../models/shortcuts/models.dart';
 import '../../../models/shortcuts/variable.dart';
-import 'component_panel.dart';
+import 'unified_component_panel.dart';
 import 'property_editor.dart';
 import 'cross_container_draggable.dart';
 import 'expression_editor.dart';
@@ -962,113 +962,38 @@ class CompositeComponentWidget extends HookWidget {
 
 
   void _showAddComponentDialog(ComponentSection section) {
-    final theme = ThemeController.to.currentThemeConfig;
-    
-    Get.bottomSheet(
-      Container(
-        height: MediaQuery.of(Get.context!).size.height * 0.8,
-        decoration: BoxDecoration(
-          color: theme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          boxShadow: [
-            BoxShadow(
-              color: theme.onSurface.withValues(alpha: 0.1),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.only(top: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: theme.onSurface.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            // Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: theme.onSurface.withValues(alpha: 0.1),
-                  ),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    _getSectionIcon(section.type),
-                    color: _getComponentColor(component.type),
-                    size: 24,
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Add Component to ${section.label}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: theme.onSurface,
-                        ),
-                      ),
-                      Text(
-                        'Select a component to add',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: Icon(
-                      Icons.close,
-                      color: theme.onSurface,
-                    ),
-                    onPressed: () => Get.back(),
-                  ),
-                ],
-              ),
-            ),
-            // Component Panel Content (without double wrapper)
-            Expanded(
-              child: ComponentPanelContent(
-                title: null,  // Title is already shown in the header above
-                showCloseButton: false,  // Close button is already in the header
-                onComponentSelected: (template) {
-                  // Create new component from template
-                  final newComponent = EditableComponent(
-                    id: DateTime.now().millisecondsSinceEpoch.toString(),
-                    component: UIComponent(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      type: template.type,
-                      properties: Map<String, dynamic>.from(template.defaultProperties),
-                    ),
-                    order: section.children.length,
-                    parentSectionId: section.id,
-                  );
-                  
-                  // Add to section
-                  onAddComponent(section.id, newComponent);
-                  
-                  // ComponentPanelContent will handle closing the bottom sheet
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+    showModalBottomSheet(
+      context: Get.context!,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => UnifiedComponentPanel(
+          hideLogicComponents: true,  // Hide logic components when adding to sections
+          onComponentSelected: (component) {
+            // Only handle regular components, not logic components
+            if (component is ComponentTemplate) {
+              // Create new component from template
+              final newComponent = EditableComponent(
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                component: UIComponent(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  type: component.type,
+                  properties: Map<String, dynamic>.from(component.defaultProperties),
+                ),
+                order: section.children.length,
+                parentSectionId: section.id,
+              );
+              
+              // Add to section
+              onAddComponent(section.id, newComponent);
+            }
+            // Ignore logic components (CompositeComponentType) for sections
+          },
+        ),
+      ),
     );
   }
 

@@ -6,11 +6,10 @@ import 'package:collection/collection.dart';
 import '../../core/theme/controllers/theme_controller.dart';
 import '../../models/shortcuts/models.dart';
 import '../../controllers/shortcuts/editor_controller.dart';
-import '../../widgets/shortcuts/editor/widgets.dart';
 import '../../widgets/shortcuts/editor/variable_definition_section.dart';
 import '../../widgets/shortcuts/editor/draggable_component_card.dart';
 import '../../widgets/shortcuts/editor/composite_component_widget.dart';
-import '../../widgets/shortcuts/editor/composite_component_panel.dart';
+import '../../widgets/shortcuts/editor/unified_component_panel.dart';
 import '../../widgets/shortcuts/editor/cross_container_draggable.dart';
 import '../../widgets/shortcuts/editor/final_prompt_builder_widget.dart';
 import '../../services/shortcuts/storage_service.dart';
@@ -278,28 +277,14 @@ class EditorPage extends HookWidget {
           initialChildSize: 0.9,
           minChildSize: 0.5,
           maxChildSize: 0.95,
-          builder: (context, scrollController) => ComponentPanel(
-            onComponentSelected: (template) {
-              controller.addComponent(template);
-            },
-          ),
-        ),
-      );
-    }
-    
-    void handleAddLogicComponent() {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) => DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.4,
-          maxChildSize: 0.9,
-          builder: (context, scrollController) => CompositeComponentPanel(
-            onComponentSelected: (type, config) {
-              controller.addCompositeComponent(type, config: config);
-              Navigator.of(context).pop();
+          builder: (context, scrollController) => UnifiedComponentPanel(
+            onComponentSelected: (component) {
+              // Check if it's a logic component or regular component
+              if (component is CompositeComponentType) {
+                controller.addCompositeComponent(component);
+              } else if (component is ComponentTemplate) {
+                controller.addComponent(component);
+              }
             },
           ),
         ),
@@ -749,34 +734,16 @@ class EditorPage extends HookWidget {
                 ],
               ),
               
-              // Floating Action Buttons
+              // Floating Action Button
               Positioned(
                 bottom: 16,
                 right: 16,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    // Logic button
-                    FloatingActionButton.extended(
-                      heroTag: "logic_fab",
-                      onPressed: handleAddLogicComponent,
-                      icon: const Icon(Icons.account_tree),
-                      label: const Text('LOGIC'),
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                    ),
-                    const SizedBox(height: 12),
-                    // Component button
-                    FloatingActionButton.extended(
-                      heroTag: "component_fab",
-                      onPressed: handleAddComponent,
-                      icon: const Icon(Icons.add),
-                      label: const Text('COMPONENT'),
-                      backgroundColor: theme.primary,
-                      foregroundColor: theme.onPrimary,
-                    ),
-                  ],
+                child: FloatingActionButton.extended(
+                  onPressed: handleAddComponent,
+                  icon: const Icon(Icons.add),
+                  label: const Text('ADD COMPONENT'),
+                  backgroundColor: theme.primary,
+                  foregroundColor: theme.onPrimary,
                 ),
               ),
             ],
