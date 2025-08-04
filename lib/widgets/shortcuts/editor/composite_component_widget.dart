@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:get/get.dart';
+import '../../../controllers/shortcuts/editor_controller.dart';
 import '../../../core/theme/controllers/theme_controller.dart';
 import '../../../models/shortcuts/composite_component.dart';
 import '../../../models/shortcuts/editor_models.dart';
@@ -509,22 +510,79 @@ class CompositeComponentWidget extends HookWidget {
           Container(
             padding: const EdgeInsets.all(16),
             constraints: const BoxConstraints(minHeight: 80),
-            child: section.children.isEmpty
-                ? _buildEmptyPlaceholder(section, theme)
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: section.children.length,
-                    itemBuilder: (context, index) {
-                      final child = section.children[index];
-                      return _buildDraggableChild(
-                        child,
-                        section,
-                        index,
-                        theme,
-                      );
-                    },
-                  ),
+            child: ComponentDropTarget(
+              targetSectionId: section.id,
+              targetIndex: section.children.length,
+              onAccept: (dragData, targetIndex) {
+                // Handle drop from main list to section
+                if (dragData.sourceSectionId == null) {
+                  // Component is from main list
+                  final controller = Get.find<EditorController>();
+                  controller.moveComponentToSection(
+                    dragData.component.id,
+                    section.id,
+                    targetIndex,
+                  );
+                } else if (dragData.sourceSectionId == section.id) {
+                  // Reorder within same section
+                  onReorderInSection(dragData.sourceIndex, targetIndex, section.id);
+                } else {
+                  // Move from another section - first move to main list, then to this section
+                  final controller = Get.find<EditorController>();
+                  controller.moveComponentToMainList(dragData.component.id, 0);
+                  controller.moveComponentToSection(
+                    dragData.component.id,
+                    section.id,
+                    targetIndex,
+                  );
+                }
+              },
+              showDropIndicator: section.children.isEmpty,
+              child: section.children.isEmpty
+                  ? _buildEmptyPlaceholder(section, theme)
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: section.children.length,
+                      itemBuilder: (context, index) {
+                        final child = section.children[index];
+                        return ComponentDropTarget(
+                          targetSectionId: section.id,
+                          targetIndex: index,
+                          onAccept: (dragData, targetIndex) {
+                            // Handle drop from main list to section
+                            if (dragData.sourceSectionId == null) {
+                              // Component is from main list
+                              final controller = Get.find<EditorController>();
+                              controller.moveComponentToSection(
+                                dragData.component.id,
+                                section.id,
+                                targetIndex,
+                              );
+                            } else if (dragData.sourceSectionId == section.id) {
+                              // Reorder within same section
+                              onReorderInSection(dragData.sourceIndex, targetIndex, section.id);
+                            } else {
+                              // Move from another section - first move to main list, then to this section
+                              final controller = Get.find<EditorController>();
+                              controller.moveComponentToMainList(dragData.component.id, 0);
+                              controller.moveComponentToSection(
+                                dragData.component.id,
+                                section.id,
+                                targetIndex,
+                              );
+                            }
+                          },
+                          child: _buildDraggableChild(
+                            child,
+                            section,
+                            index,
+                            theme,
+                          ),
+                        );
+                      },
+                    ),
+            ),
           ),
         ],
       ),
@@ -563,6 +621,7 @@ class CompositeComponentWidget extends HookWidget {
           border: Border.all(
             color: theme.onBackground.withValues(alpha: 0.1),
             style: BorderStyle.solid,
+            width: 2,
           ),
           borderRadius: BorderRadius.circular(8),
         ),
@@ -576,7 +635,7 @@ class CompositeComponentWidget extends HookWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              'Add components here',
+              'Drop components here or tap to add',
               style: TextStyle(
                 color: theme.onBackground.withValues(alpha: 0.3),
                 fontSize: 12,

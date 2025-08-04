@@ -42,8 +42,8 @@ class DragHelper {
         return draggedItem.parentSectionId == targetSectionId || targetSectionId == null;
         
       case DragType.component:
-        // Regular components can be dropped in main list or empty sections
-        return targetSectionId == null || targetLocation is ComponentSection;
+        // Regular components can be dropped in main list or composite sections
+        return true; // Allow dropping anywhere
     }
   }
 

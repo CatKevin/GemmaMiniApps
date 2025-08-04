@@ -439,6 +439,64 @@ class EditorController extends GetxController {
     );
   }
   
+  /// Move component from main list to a specific section
+  void moveComponentToSection(String componentId, String targetSectionId, int targetIndex) {
+    if (session.value == null) return;
+    
+    // Find and remove component from main list
+    final componentIndex = session.value!.components.indexWhere((c) => c.id == componentId);
+    if (componentIndex == -1) return;
+    
+    final componentToMove = session.value!.components[componentIndex];
+    final updatedComponents = List<EditableComponent>.from(session.value!.components);
+    updatedComponents.removeAt(componentIndex);
+    
+    // Update order values in main list
+    for (int i = 0; i < updatedComponents.length; i++) {
+      updatedComponents[i] = updatedComponents[i].copyWith(order: i);
+    }
+    
+    // Find the target section and add component
+    bool added = false;
+    for (var comp in updatedComponents) {
+      if (comp.isComposite && comp.compositeComponent != null) {
+        final section = comp.compositeComponent!.sections
+            .firstWhereOrNull((s) => s.id == targetSectionId);
+        
+        if (section != null) {
+          // Update component's parent section ID
+          final movedComponent = componentToMove.copyWith(
+            parentSectionId: targetSectionId,
+            order: targetIndex,
+          );
+          
+          // Insert at target position
+          if (targetIndex >= section.children.length) {
+            section.children.add(movedComponent);
+          } else {
+            section.children.insert(targetIndex, movedComponent);
+          }
+          
+          // Update order values in section
+          for (int i = 0; i < section.children.length; i++) {
+            section.children[i] = section.children[i].copyWith(order: i);
+          }
+          
+          added = true;
+          break;
+        }
+      }
+    }
+    
+    if (added) {
+      session.value = session.value!.copyWith(
+        components: updatedComponents,
+        hasUnsavedChanges: true,
+        lastModified: DateTime.now(),
+      );
+    }
+  }
+  
   /// Update component property
   void updateComponentProperty(String componentId, String key, dynamic value) {
     if (session.value == null) return;
