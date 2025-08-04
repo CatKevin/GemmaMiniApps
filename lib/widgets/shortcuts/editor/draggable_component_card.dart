@@ -111,17 +111,53 @@ class DraggableComponentCard extends HookWidget {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: theme.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            _getComponentIcon(component.component.type),
-                            color: theme.primary,
-                            size: 20,
-                          ),
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: theme.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                _getComponentIcon(component.component.type),
+                                color: theme.primary,
+                                size: 20,
+                              ),
+                            ),
+                            // Position indicator as a small badge
+                            if (index == 0 || index == totalCount - 1)
+                              Positioned(
+                                top: -4,
+                                right: -4,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 1,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: index == 0 ? Colors.green : Colors.orange,
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.2),
+                                        blurRadius: 2,
+                                        offset: const Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    index == 0 ? '1st' : 'Last',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),
@@ -255,30 +291,6 @@ class DraggableComponentCard extends HookWidget {
               ),
             ),
           ),
-          
-          // Position indicator
-          if (index == 0 || index == totalCount - 1)
-            Padding(
-              padding: const EdgeInsets.only(left: 60, right: 16, bottom: 4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 1,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  index == 0 ? 'First' : 'Last',
-                  style: TextStyle(
-                    color: theme.primary,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
           
           // Property editor (shown when expanded)
           if (component.isExpanded && template != null)

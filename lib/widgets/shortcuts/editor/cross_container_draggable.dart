@@ -17,7 +17,7 @@ class DragData {
 }
 
 /// Widget that enables cross-container drag and drop
-class CrossContainerDraggable extends StatelessWidget {
+class CrossContainerDraggable extends StatefulWidget {
   final EditableComponent component;
   final Widget child;
   final String? sectionId;
@@ -38,34 +38,118 @@ class CrossContainerDraggable extends StatelessWidget {
   });
 
   @override
+  State<CrossContainerDraggable> createState() => _CrossContainerDraggableState();
+}
+
+class _CrossContainerDraggableState extends State<CrossContainerDraggable>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _onLongPressStart(_) {
+    setState(() => _isPressed = true);
+    _animationController.forward();
+    HapticFeedback.lightImpact();
+  }
+
+  void _onLongPressEnd(_) {
+    setState(() => _isPressed = false);
+    _animationController.reverse();
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Check if dragging is allowed
-    final dragType = DragHelper.getDragType(component);
-    if (!enabled || dragType == DragType.forbidden) {
-      return child;
+    final dragType = DragHelper.getDragType(widget.component);
+    if (!widget.enabled || dragType == DragType.forbidden) {
+      return widget.child;
     }
 
-    return LongPressDraggable<DragData>(
-      data: DragData(
-        component: component,
-        sourceSectionId: sectionId,
-        sourceIndex: index,
-      ),
-      onDragStarted: () {
-        HapticFeedback.mediumImpact();
-        onDragStarted?.call();
+    return GestureDetector(
+      onLongPressStart: _onLongPressStart,
+      onLongPressEnd: _onLongPressEnd,
+      onLongPressCancel: () {
+        setState(() => _isPressed = false);
+        _animationController.reverse();
       },
-      onDragCompleted: onDragCompleted,
-      feedback: DragHelper.buildDragFeedback(
-        context: context,
-        component: component,
-        theme: Theme.of(context),
+      child: AnimatedBuilder(
+        animation: _scaleAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: _isPressed
+                    ? [
+                        BoxShadow(
+                          color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: LongPressDraggable<DragData>(
+                data: DragData(
+                  component: widget.component,
+                  sourceSectionId: widget.sectionId,
+                  sourceIndex: widget.index,
+                ),
+                onDragStarted: () {
+                  HapticFeedback.mediumImpact();
+                  widget.onDragStarted?.call();
+                },
+                onDragCompleted: widget.onDragCompleted,
+                onDragEnd: (_) {
+                  setState(() => _isPressed = false);
+                  _animationController.reverse();
+                },
+                feedback: Material(
+                  color: Colors.transparent,
+                  child: Transform.scale(
+                    scale: 1.05,
+                    child: DragHelper.buildDragFeedback(
+                      context: context,
+                      component: widget.component,
+                      theme: Theme.of(context),
+                    ),
+                  ),
+                ),
+                childWhenDragging: Opacity(
+                  opacity: 0.2,
+                  child: widget.child,
+                ),
+                child: widget.child,
+              ),
+            ),
+          );
+        },
       ),
-      childWhenDragging: Opacity(
-        opacity: 0.3,
-        child: child,
-      ),
-      child: child,
     );
   }
 }
