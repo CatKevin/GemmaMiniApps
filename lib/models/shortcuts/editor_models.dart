@@ -487,25 +487,6 @@ class ComponentTemplateLibrary {
       ],
     ),
     ComponentTemplate(
-      id: 'role-definition',
-      name: 'Role Definition',
-      description: 'Define AI role',
-      icon: Icons.person,
-      category: ComponentCategory.prompt,
-      type: ComponentType.roleDefinition,
-      defaultProperties: {
-        'role': 'You are a helpful assistant',
-      },
-      editableProperties: [
-        ComponentProperty(
-          key: 'role',
-          label: 'Role Description',
-          type: PropertyType.richText,
-          required: true,
-        ),
-      ],
-    ),
-    ComponentTemplate(
       id: 'task-description',
       name: 'Task Description',
       description: 'Define the task',
@@ -521,81 +502,6 @@ class ComponentTemplateLibrary {
           label: 'Task Description',
           type: PropertyType.richText,
           required: true,
-        ),
-      ],
-    ),
-    
-    // Enhanced dropdown that can link to SWITCH-CASE
-    ComponentTemplate(
-      id: 'enhanced-dropdown',
-      name: 'Enhanced Dropdown',
-      description: 'Dropdown with SWITCH-CASE support',
-      icon: Icons.arrow_drop_down_circle,
-      category: ComponentCategory.selection,
-      type: ComponentType.dropdown,
-      defaultProperties: {
-        'label': 'Select an option',
-        'options': [
-          {'value': 'option1', 'label': 'Option 1', 'emoji': '1️⃣'},
-          {'value': 'option2', 'label': 'Option 2', 'emoji': '2️⃣'},
-          {'value': 'option3', 'label': 'Option 3', 'emoji': '3️⃣'},
-        ],
-        'enableDynamicCase': true,
-        'placeholder': 'Choose...',
-      },
-      editableProperties: [
-        ComponentProperty(
-          key: 'label',
-          label: 'Label',
-          type: PropertyType.text,
-          required: true,
-        ),
-        ComponentProperty(
-          key: 'variableName',
-          label: 'Variable Name',
-          type: PropertyType.variable,
-          required: false,
-        ),
-        ComponentProperty(
-          key: 'options',
-          label: 'Options (JSON)',
-          type: PropertyType.text,
-          required: true,
-        ),
-        ComponentProperty(
-          key: 'enableDynamicCase',
-          label: 'Link to SWITCH-CASE',
-          type: PropertyType.boolean,
-          defaultValue: false,
-        ),
-      ],
-    ),
-    
-    // Special Final Prompt Builder Component
-    ComponentTemplate(
-      id: 'final-prompt-builder',
-      name: 'Final Prompt Builder',
-      description: 'Build your final prompt with variables',
-      icon: Icons.auto_awesome,
-      category: ComponentCategory.prompt,
-      type: ComponentType.finalPromptBuilder,
-      defaultProperties: {
-        'promptTemplate': 'Enter your prompt here. Use {{variableName}} to insert variables.',
-        'enablePreview': true,
-        'previewVariables': <String, dynamic>{},
-      },
-      editableProperties: [
-        ComponentProperty(
-          key: 'promptTemplate',
-          label: 'Prompt Template',
-          type: PropertyType.richText,
-          required: true,
-        ),
-        ComponentProperty(
-          key: 'enablePreview',
-          label: 'Enable Preview',
-          type: PropertyType.boolean,
-          defaultValue: true,
         ),
       ],
     ),
