@@ -41,6 +41,20 @@ class EditorPage extends HookWidget {
     return convertedVariables;
   }
 
+  // Helper function to get the actual index in the full components list
+  int _getActualIndex(List<EditableComponent> workflowComponents, int workflowIndex, List<EditableComponent> allComponents) {
+    if (workflowIndex >= workflowComponents.length) {
+      // This is for the drop zone at the end, should be before Final Prompt Builder
+      final finalPromptIndex = allComponents.indexWhere(
+        (c) => c.component.type == ComponentType.finalPromptBuilder
+      );
+      return finalPromptIndex != -1 ? finalPromptIndex : allComponents.length;
+    }
+    
+    final component = workflowComponents[workflowIndex];
+    return allComponents.indexWhere((c) => c.id == component.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeController = ThemeController.to;
@@ -306,7 +320,7 @@ class EditorPage extends HookWidget {
 
     return PopScope(
       canPop: !controller.hasUnsavedChanges,
-      onPopInvoked: (didPop) async {
+      onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 
         final result = await Get.dialog<bool>(
@@ -387,32 +401,50 @@ class EditorPage extends HookWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          return Column(
+          // Find the Final Prompt Builder component
+          final finalPromptBuilderIndex = session.components.indexWhere(
+            (c) => c.component.type == ComponentType.finalPromptBuilder
+          );
+          EditableComponent? finalPromptBuilder;
+          List<EditableComponent> workflowComponents = session.components;
+          
+          if (finalPromptBuilderIndex != -1) {
+            finalPromptBuilder = session.components[finalPromptBuilderIndex];
+            // Create a list without the Final Prompt Builder
+            workflowComponents = session.components
+                .where((c) => c.component.type != ComponentType.finalPromptBuilder)
+                .toList();
+          }
+
+          return Stack(
             children: [
-              // Components list
-              Expanded(
-                child: SingleChildScrollView(
-                        padding: const EdgeInsets.only(bottom: 80),
-                        child: Column(
-                          children: [
-                            // Variable definition section (always first)
-                            VariableDefinitionSection(
-                              variables: variables.value,
-                              onAddVariable: handleAddVariable,
-                              onUpdateVariable: handleUpdateVariable,
-                              onDeleteVariable: handleDeleteVariable,
-                              onVariableSelected: (variableId) {
-                                Get.snackbar(
-                                  'Variable Selected',
-                                  'Use {{$variableId}} to reference this variable',
-                                  snackPosition: SnackPosition.TOP,
-                                  duration: const Duration(seconds: 2),
-                                );
-                              },
-                            ),
-                            
-                            // Components list
-                            session.components.isEmpty
+              // Main content
+              Column(
+                children: [
+                  // Scrollable area containing everything
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.only(bottom: 120), // Space for FAB
+                      child: Column(
+                        children: [
+                          // Variable definition section (always first)
+                          VariableDefinitionSection(
+                            variables: variables.value,
+                            onAddVariable: handleAddVariable,
+                            onUpdateVariable: handleUpdateVariable,
+                            onDeleteVariable: handleDeleteVariable,
+                            onVariableSelected: (variableId) {
+                              Get.snackbar(
+                                'Variable Selected',
+                                'Use {{$variableId}} to reference this variable',
+                                snackPosition: SnackPosition.TOP,
+                                duration: const Duration(seconds: 2),
+                              );
+                            },
+                          ),
+                          
+                          // Components list
+                          workflowComponents.isEmpty
                               ? Container(
                                   padding: const EdgeInsets.symmetric(vertical: 60),
                                   child: Column(
@@ -443,26 +475,38 @@ class EditorPage extends HookWidget {
                                   shrinkWrap: true,
                                   physics: const NeverScrollableScrollPhysics(),
                                   padding: EdgeInsets.zero,
-                                  itemCount: session.components.length + 1, // +1 for the drop zone at the end
+                                  itemCount: workflowComponents.length + 1, // +1 for the drop zone at the end
                                   itemBuilder: (context, index) {
                                     // Drop zone at the end
-                                    if (index == session.components.length) {
+                                    if (index == workflowComponents.length) {
                                       return ComponentDropTarget(
                                         targetIndex: index,
                                         targetSectionId: null,
                                         showDropIndicator: false,
                                         onAccept: (dragData, targetIndex) {
+                                          // Get actual index in full components list
+                                          final actualTargetIndex = _getActualIndex(
+                                            workflowComponents, 
+                                            targetIndex, 
+                                            session.components
+                                          );
+                                          
                                           // Handle drop from section to main list
                                           if (dragData.sourceSectionId != null) {
                                             controller.moveComponentToMainList(
                                               dragData.component.id,
-                                              targetIndex,
+                                              actualTargetIndex,
                                             );
                                           } else {
                                             // Regular reorder within main list
-                                            controller.reorderComponents(
+                                            final actualSourceIndex = _getActualIndex(
+                                              workflowComponents,
                                               dragData.sourceIndex,
-                                              targetIndex,
+                                              session.components
+                                            );
+                                            controller.reorderComponents(
+                                              actualSourceIndex,
+                                              actualTargetIndex,
                                             );
                                           }
                                         },
@@ -495,28 +539,40 @@ class EditorPage extends HookWidget {
                                       );
                                     }
                                     
-                                    final component = session.components[index];
+                                    final component = workflowComponents[index];
                                     
                                     // Wrap components with drop target
                                     return ComponentDropTarget(
                                       targetIndex: index,
                                       targetSectionId: null,
                                       onAccept: (dragData, targetIndex) {
+                                        // Get actual indices in full components list
+                                        final actualTargetIndex = _getActualIndex(
+                                          workflowComponents,
+                                          targetIndex,
+                                          session.components
+                                        );
+                                        
                                         // Handle drop from section to main list
                                         if (dragData.sourceSectionId != null) {
                                           controller.moveComponentToMainList(
                                             dragData.component.id,
-                                            targetIndex,
+                                            actualTargetIndex,
                                           );
                                         } else {
                                           // Regular reorder within main list
-                                          int sourceIndex = dragData.sourceIndex;
-                                          if (sourceIndex > targetIndex) {
+                                          final actualSourceIndex = _getActualIndex(
+                                            workflowComponents,
+                                            dragData.sourceIndex,
+                                            session.components
+                                          );
+                                          
+                                          if (actualSourceIndex > actualTargetIndex) {
                                             // Moving up
-                                            controller.reorderComponents(sourceIndex, targetIndex);
+                                            controller.reorderComponents(actualSourceIndex, actualTargetIndex);
                                           } else {
                                             // Moving down
-                                            controller.reorderComponents(sourceIndex, targetIndex - 1);
+                                            controller.reorderComponents(actualSourceIndex, actualTargetIndex - 1);
                                           }
                                         }
                                       },
@@ -562,21 +618,6 @@ class EditorPage extends HookWidget {
                                                 onAddVariable: handleAddVariable,
                                               ),
                                             );
-                                          } else if (component.component.type == ComponentType.finalPromptBuilder) {
-                                            // Special rendering for FinalPromptBuilder
-                                            return FinalPromptBuilderWidget(
-                                              component: component,
-                                              onPropertyChanged: (key, value) {
-                                                controller.updateComponentProperty(
-                                                  component.id,
-                                                  key,
-                                                  value,
-                                                );
-                                              },
-                                              availableVariables: variables.value,
-                                              onAddVariable: handleAddVariable,
-                                              theme: theme,
-                                            );
                                           } else {
                                             // Regular component
                                             final template = ComponentTemplateLibrary.getTemplate(
@@ -592,7 +633,7 @@ class EditorPage extends HookWidget {
                                                 component: component,
                                                 template: template,
                                                 index: index,
-                                                totalCount: session.components.length,
+                                                totalCount: workflowComponents.length,
                                                 theme: theme,
                                                 onExpand: () {
                                                   controller.toggleComponentExpansion(component.id);
@@ -602,11 +643,31 @@ class EditorPage extends HookWidget {
                                                 },
                                                 onMoveUp: index > 0 ? () {
                                                   HapticFeedback.lightImpact();
-                                                  controller.reorderComponents(index, index - 1);
+                                                  final actualIndex = _getActualIndex(
+                                                    workflowComponents,
+                                                    index,
+                                                    session.components
+                                                  );
+                                                  final actualPrevIndex = _getActualIndex(
+                                                    workflowComponents,
+                                                    index - 1,
+                                                    session.components
+                                                  );
+                                                  controller.reorderComponents(actualIndex, actualPrevIndex);
                                                 } : null,
-                                                onMoveDown: index < session.components.length - 1 ? () {
+                                                onMoveDown: index < workflowComponents.length - 1 ? () {
                                                   HapticFeedback.lightImpact();
-                                                  controller.reorderComponents(index, index + 1);
+                                                  final actualIndex = _getActualIndex(
+                                                    workflowComponents,
+                                                    index,
+                                                    session.components
+                                                  );
+                                                  final actualNextIndex = _getActualIndex(
+                                                    workflowComponents,
+                                                    index + 1,
+                                                    session.components
+                                                  );
+                                                  controller.reorderComponents(actualIndex, actualNextIndex);
                                                 } : null,
                                                 onPropertyChanged: (key, value) {
                                                   controller.updateComponentProperty(
@@ -625,54 +686,95 @@ class EditorPage extends HookWidget {
                                     );
                                   },
                               ),
+                          
+                          // Final Prompt Builder integrated in the flow
+                          if (finalPromptBuilder != null) ...[
+                            const SizedBox(height: 32),
+                            Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Column(
+                                children: [
+                                  // Separator
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Container(
+                                          height: 1,
+                                          color: theme.primary.withValues(alpha: 0.2),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                                        child: Text(
+                                          'FINAL STEP',
+                                          style: TextStyle(
+                                            color: theme.primary,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Container(
+                                          height: 1,
+                                          color: theme.primary.withValues(alpha: 0.2),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  // Final Prompt Builder
+                                  FinalPromptBuilderWidget(
+                                    component: finalPromptBuilder,
+                                    onPropertyChanged: (key, value) {
+                                      controller.updateComponentProperty(
+                                        finalPromptBuilder!.id,
+                                        key,
+                                        value,
+                                      );
+                                    },
+                                    availableVariables: variables.value,
+                                    onAddVariable: handleAddVariable,
+                                    theme: theme,
+                                    isMinimized: false, // Start expanded in the flow
+                                  ),
+                                ],
+                              ),
+                            ),
                           ],
-                        ),
+                        ],
                       ),
-              ),
-              
-              // Add component buttons at the bottom
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: theme.background,
-                  border: Border(
-                    top: BorderSide(
-                      color: theme.onBackground.withValues(alpha: 0.1),
                     ),
                   ),
-                ),
-                child: Row(
+                ],
+              ),
+              
+              // Floating Action Buttons
+              Positioned(
+                bottom: 16,
+                right: 16,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: handleAddComponent,
-                        icon: const Icon(Icons.add),
-                        label: const Text('COMPONENT'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.primary,
-                          foregroundColor: theme.onPrimary,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
+                    // Logic button
+                    FloatingActionButton.extended(
+                      heroTag: "logic_fab",
+                      onPressed: handleAddLogicComponent,
+                      icon: const Icon(Icons.account_tree),
+                      label: const Text('LOGIC'),
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: handleAddLogicComponent,
-                        icon: const Icon(Icons.account_tree),
-                        label: const Text('LOGIC'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
+                    const SizedBox(height: 12),
+                    // Component button
+                    FloatingActionButton.extended(
+                      heroTag: "component_fab",
+                      onPressed: handleAddComponent,
+                      icon: const Icon(Icons.add),
+                      label: const Text('COMPONENT'),
+                      backgroundColor: theme.primary,
+                      foregroundColor: theme.onPrimary,
                     ),
                   ],
                 ),

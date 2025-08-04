@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import '../../../core/theme/models/theme_config.dart';
 import '../../../models/shortcuts/models.dart';
-import '../../../services/shortcuts/prompt_builder.dart';
 
 class FinalPromptBuilderWidget extends HookWidget {
   final EditableComponent component;
@@ -11,6 +10,7 @@ class FinalPromptBuilderWidget extends HookWidget {
   final List<Variable> availableVariables;
   final Function(Variable) onAddVariable;
   final ThemeConfig theme;
+  final bool isMinimized;
 
   const FinalPromptBuilderWidget({
     super.key,
@@ -19,6 +19,7 @@ class FinalPromptBuilderWidget extends HookWidget {
     required this.availableVariables,
     required this.onAddVariable,
     required this.theme,
+    this.isMinimized = false,
   });
   
   // Process template with variable substitution
@@ -38,6 +39,7 @@ class FinalPromptBuilderWidget extends HookWidget {
   @override
   Widget build(BuildContext context) {
     // State management
+    final isExpanded = useState(!isMinimized);
     final showPreview = useState(component.component.properties['enablePreview'] ?? true);
     final previewVariables = useState<Map<String, dynamic>>(
       Map<String, dynamic>.from(
@@ -118,99 +120,110 @@ class FinalPromptBuilderWidget extends HookWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.primary.withValues(alpha: 0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(14),
-                topRight: Radius.circular(14),
-              ),
+          InkWell(
+            onTap: () {
+              isExpanded.value = !isExpanded.value;
+              HapticFeedback.lightImpact();
+            },
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(14),
+              topRight: Radius.circular(14),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.auto_awesome,
-                  color: theme.primary,
-                  size: 24,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.primary.withValues(alpha: 0.1),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(14),
+                  topRight: Radius.circular(14),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Final Prompt Builder',
-                            style: TextStyle(
-                              color: theme.onSurface,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.primary.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.lock,
-                                  size: 12,
-                                  color: theme.primary,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'FIXED',
-                                  style: TextStyle(
-                                    color: theme.primary,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Build your final prompt with variables',
-                        style: TextStyle(
-                          color: theme.onSurface.withValues(alpha: 0.6),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Preview toggle
-                IconButton(
-                  onPressed: () => showPreview.value = !showPreview.value,
-                  icon: Icon(
-                    showPreview.value ? Icons.visibility : Icons.visibility_off,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.auto_awesome,
                     color: theme.primary,
+                    size: 24,
                   ),
-                  tooltip: showPreview.value ? 'Hide preview' : 'Show preview',
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Final Prompt Builder',
+                              style: TextStyle(
+                                color: theme.onSurface,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.primary.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.lock,
+                                    size: 12,
+                                    color: theme.primary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'FIXED',
+                                    style: TextStyle(
+                                      color: theme.primary,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          isExpanded.value ? 'Build your final prompt with variables' : 'Tap to expand and edit your final prompt',
+                          style: TextStyle(
+                            color: theme.onSurface.withValues(alpha: 0.6),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Expand/Collapse indicator
+                  AnimatedRotation(
+                    turns: isExpanded.value ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.expand_more,
+                      color: theme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           
-          // Editor section
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+          // Editor section (collapsible)
+          if (isExpanded.value)
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                 // Variable selector
                 if (availableVariables.isNotEmpty) ...[
                   Text(
@@ -414,7 +427,7 @@ class FinalPromptBuilderWidget extends HookWidget {
                           ],
                         ),
                       );
-                    }).toList(),
+                    }),
                   ],
                 ],
               ],
