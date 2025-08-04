@@ -165,40 +165,7 @@ class CompositeComponentWidget extends HookWidget {
       return _buildSection(context, section, theme);
     }).toList();
 
-    // Add "Add ELSE IF" button for IF-ELSE components
-    if (component is IfElseComponent) {
-      // Find the index before the ELSE section
-      final elseIndex = component.sections.indexWhere(
-        (s) => s.type == CompositeSectionType.branch && s.label == 'ELSE'
-      );
-      
-      if (elseIndex > 0) {
-        sections.insert(elseIndex, Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Center(
-            child: TextButton.icon(
-              onPressed: () {
-                (component as IfElseComponent).addElseIf('');
-                // Don't toggle expand - just trigger a rebuild
-                (context as Element).markNeedsBuild();
-              },
-              icon: Icon(Icons.add_circle_outline, size: 20),
-              label: const Text('Add ELSE IF'),
-              style: TextButton.styleFrom(
-                foregroundColor: theme.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(
-                    color: theme.primary.withValues(alpha: 0.3),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ));
-      }
-    }
+    // Removed Add ELSE IF button from here - now in header
 
     return sections;
   }
@@ -681,8 +648,8 @@ class CompositeComponentWidget extends HookWidget {
           ],
           // Content area (draggable components)
           Container(
-            padding: const EdgeInsets.all(12),
-            constraints: const BoxConstraints(minHeight: 50),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            constraints: const BoxConstraints(minHeight: 40),
             child: ComponentDropTarget(
               targetSectionId: section.id,
               targetIndex: section.children.length,
@@ -787,21 +754,18 @@ class CompositeComponentWidget extends HookWidget {
                             }
                           },
                           showDropIndicator: true,
-                          child: Container(
-                            margin: const EdgeInsets.only(top: 8),
-                            child: Center(
-                              child: TextButton.icon(
-                                onPressed: () => _showAddComponentDialog(section),
-                                icon: Icon(Icons.add_circle_outline, size: 20),
-                                label: const Text('Add Component'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: theme.primary,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    side: BorderSide(
-                                      color: theme.primary.withValues(alpha: 0.3),
-                                    ),
+                          child: Center(
+                            child: TextButton.icon(
+                              onPressed: () => _showAddComponentDialog(section),
+                              icon: Icon(Icons.add_circle_outline, size: 20),
+                              label: const Text('Add Component'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: theme.primary,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  side: BorderSide(
+                                    color: theme.primary.withValues(alpha: 0.3),
                                   ),
                                 ),
                               ),
@@ -812,6 +776,72 @@ class CompositeComponentWidget extends HookWidget {
                     ),
             ),
           ),
+          // Add ELSE IF button for THEN and ELSE IF sections
+          if (component is IfElseComponent && 
+              section.label != 'ELSE' && 
+              section.type == CompositeSectionType.branch) ...[
+            Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: theme.onBackground.withValues(alpha: 0.1),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Material(
+                color: theme.surface.withValues(alpha: 0.5),
+                child: InkWell(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    // Find the index of current section
+                    final currentIndex = component.sections.indexOf(section);
+                    // Add new ELSE IF after current section
+                    (component as IfElseComponent).addElseIf('');
+                    
+                    // Find the newly added ELSE IF (it's always inserted before ELSE)
+                    final elseIndex = component.sections.indexWhere((s) => s.label == 'ELSE');
+                    if (elseIndex > 0 && currentIndex >= 0) {
+                      // The new ELSE IF is at elseIndex - 1
+                      final newElseIf = component.sections[elseIndex - 1];
+                      // Remove it from current position
+                      component.sections.removeAt(elseIndex - 1);
+                      // Insert it right after the current section
+                      component.sections.insert(currentIndex + 1, newElseIf);
+                    }
+                    
+                    // Use a small delay to ensure the UI updates
+                    Future.delayed(Duration.zero, () {
+                      // This will trigger a rebuild after the current frame
+                      onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add,
+                          size: 16,
+                          color: theme.onBackground.withValues(alpha: 0.6),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Add ELSE IF below',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.onBackground.withValues(alpha: 0.6),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1061,7 +1091,9 @@ class _DraggableChildWidget extends HookWidget {
       index: index,
       enabled: true,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
+        margin: index < section.children.length - 1 
+            ? const EdgeInsets.only(bottom: 8)
+            : EdgeInsets.zero,
         decoration: BoxDecoration(
           color: theme.surface,
           border: Border.all(
