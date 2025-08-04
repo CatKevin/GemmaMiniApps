@@ -12,6 +12,7 @@ import '../../widgets/shortcuts/editor/draggable_component_card.dart';
 import '../../widgets/shortcuts/editor/composite_component_widget.dart';
 import '../../widgets/shortcuts/editor/composite_component_panel.dart';
 import '../../widgets/shortcuts/editor/cross_container_draggable.dart';
+import '../../widgets/shortcuts/editor/final_prompt_builder_widget.dart';
 import '../../services/shortcuts/storage_service.dart';
 import '../routes.dart';
 
@@ -560,6 +561,21 @@ class EditorPage extends HookWidget {
                                                 availableVariables: variables.value,
                                                 onAddVariable: handleAddVariable,
                                               ),
+                                            );
+                                          } else if (component.component.type == ComponentType.finalPromptBuilder) {
+                                            // Special rendering for FinalPromptBuilder
+                                            return FinalPromptBuilderWidget(
+                                              component: component,
+                                              onPropertyChanged: (key, value) {
+                                                controller.updateComponentProperty(
+                                                  component.id,
+                                                  key,
+                                                  value,
+                                                );
+                                              },
+                                              availableVariables: variables.value,
+                                              onAddVariable: handleAddVariable,
+                                              theme: theme,
                                             );
                                           } else {
                                             // Regular component

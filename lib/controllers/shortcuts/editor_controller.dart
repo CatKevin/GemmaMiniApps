@@ -37,6 +37,10 @@ class EditorController extends GetxController {
     if (existingShortcut != null) {
       // Edit existing shortcut
       final components = _convertToEditableComponents(existingShortcut.screens);
+      
+      // Ensure FinalPromptBuilder is at the end
+      _ensureFinalPromptBuilder(components);
+      
       session.value = EditorSession(
         shortcutId: existingShortcut.id,
         shortcutName: existingShortcut.name,
@@ -49,16 +53,50 @@ class EditorController extends GetxController {
       );
     } else {
       // Create new shortcut
+      final components = <EditableComponent>[];
+      
+      // Add default FinalPromptBuilder component
+      _ensureFinalPromptBuilder(components);
+      
       session.value = EditorSession(
         shortcutId: DateTime.now().millisecondsSinceEpoch.toString(),
         shortcutName: '',
-        components: [],
+        components: components,
         variables: {},
         expandedComponents: {},
         selectedComponentId: null,
         hasUnsavedChanges: false,
         lastModified: DateTime.now(),
       );
+    }
+  }
+  
+  /// Ensure there's a FinalPromptBuilder at the end of components
+  void _ensureFinalPromptBuilder(List<EditableComponent> components) {
+    // Remove any existing FinalPromptBuilder components
+    components.removeWhere((c) => c.component.type == ComponentType.finalPromptBuilder);
+    
+    // Add FinalPromptBuilder at the end
+    final finalPromptBuilder = UIComponent(
+      id: 'final_prompt_builder_${DateTime.now().millisecondsSinceEpoch}',
+      type: ComponentType.finalPromptBuilder,
+      properties: {
+        'promptTemplate': 'Enter your prompt here. Use {{variableName}} to insert variables.',
+        'enablePreview': true,
+        'previewVariables': <String, dynamic>{},
+      },
+    );
+    
+    components.add(EditableComponent(
+      id: finalPromptBuilder.id,
+      component: finalPromptBuilder,
+      order: components.length,
+      isExpanded: true, // Always expanded by default
+    ));
+    
+    // Update order for all components
+    for (int i = 0; i < components.length; i++) {
+      components[i] = components[i].copyWith(order: i);
     }
   }
   
@@ -117,20 +155,39 @@ class EditorController extends GetxController {
   void addComponent(ComponentTemplate template) {
     if (session.value == null) return;
     
+    // Don't allow adding another FinalPromptBuilder
+    if (template.type == ComponentType.finalPromptBuilder) return;
+    
     final newComponent = UIComponent(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       type: template.type,
       properties: Map.from(template.defaultProperties),
     );
     
+    final updatedComponents = List<EditableComponent>.from(session.value!.components);
+    
+    // Find FinalPromptBuilder index
+    final finalPromptIndex = updatedComponents.indexWhere(
+      (c) => c.component.type == ComponentType.finalPromptBuilder
+    );
+    
+    // Insert before FinalPromptBuilder if it exists, otherwise at the end
+    final insertIndex = finalPromptIndex != -1 
+        ? finalPromptIndex 
+        : updatedComponents.length;
+    
     final editableComponent = EditableComponent(
       id: newComponent.id,
       component: newComponent,
-      order: session.value!.components.length,
+      order: insertIndex,
     );
     
-    final updatedComponents = List<EditableComponent>.from(session.value!.components)
-      ..add(editableComponent);
+    updatedComponents.insert(insertIndex, editableComponent);
+    
+    // Update order for all components
+    for (int i = 0; i < updatedComponents.length; i++) {
+      updatedComponents[i] = updatedComponents[i].copyWith(order: i);
+    }
     
     session.value = session.value!.copyWith(
       components: updatedComponents,
@@ -165,11 +222,27 @@ class EditorController extends GetxController {
         return; // Not implemented yet
     }
     
-    var editableComponent = compositeComponent.toEditableComponent();
-    editableComponent = editableComponent.copyWith(order: session.value!.components.length);
+    final updatedComponents = List<EditableComponent>.from(session.value!.components);
     
-    final updatedComponents = List<EditableComponent>.from(session.value!.components)
-      ..add(editableComponent);
+    // Find FinalPromptBuilder index
+    final finalPromptIndex = updatedComponents.indexWhere(
+      (c) => c.component.type == ComponentType.finalPromptBuilder
+    );
+    
+    // Insert before FinalPromptBuilder if it exists, otherwise at the end
+    final insertIndex = finalPromptIndex != -1 
+        ? finalPromptIndex 
+        : updatedComponents.length;
+    
+    var editableComponent = compositeComponent.toEditableComponent();
+    editableComponent = editableComponent.copyWith(order: insertIndex);
+    
+    updatedComponents.insert(insertIndex, editableComponent);
+    
+    // Update order for all components
+    for (int i = 0; i < updatedComponents.length; i++) {
+      updatedComponents[i] = updatedComponents[i].copyWith(order: i);
+    }
     
     session.value = session.value!.copyWith(
       components: updatedComponents,
@@ -268,6 +341,11 @@ class EditorController extends GetxController {
         .indexWhere((c) => c.id == componentId);
     
     if (componentIndex != -1) {
+      // Don't allow removing FinalPromptBuilder
+      if (session.value!.components[componentIndex].component.type == ComponentType.finalPromptBuilder) {
+        return;
+      }
+      
       // Found in main list
       final updatedComponents = session.value!.components
           .where((c) => c.id != componentId)
@@ -494,6 +572,20 @@ class EditorController extends GetxController {
     
     final components = List<EditableComponent>.from(session.value!.components);
     
+    // Don't allow moving FinalPromptBuilder
+    if (oldIndex < components.length && 
+        components[oldIndex].component.type == ComponentType.finalPromptBuilder) {
+      return;
+    }
+    
+    // Don't allow moving to/past FinalPromptBuilder position
+    final finalPromptIndex = components.indexWhere(
+      (c) => c.component.type == ComponentType.finalPromptBuilder
+    );
+    if (finalPromptIndex != -1 && newIndex >= finalPromptIndex) {
+      newIndex = finalPromptIndex - 1;
+    }
+    
     if (oldIndex < newIndex) {
       newIndex -= 1;
     }
@@ -651,29 +743,45 @@ class EditorController extends GetxController {
       // Create prompt template from components
       final promptSections = <PromptSection>[];
       
-      for (int i = 0; i < session.value!.components.length; i++) {
-        final component = session.value!.components[i];
-        if (component.component.type == ComponentType.roleDefinition) {
-          promptSections.add(PromptSection(
-            id: 'section_$i',
-            type: PromptSectionType.role,
-            content: component.component.properties['role'] ?? '',
-            order: i,
-          ));
-        } else if (component.component.type == ComponentType.taskDescription) {
-          promptSections.add(PromptSection(
-            id: 'section_$i',
-            type: PromptSectionType.task,
-            content: component.component.properties['task'] ?? '',
-            order: i,
-          ));
-        } else if (component.component.type == ComponentType.textTemplate) {
-          promptSections.add(PromptSection(
-            id: 'section_$i',
-            type: PromptSectionType.custom,
-            content: component.component.properties['content'] ?? '',
-            order: i,
-          ));
+      // Check if we have a FinalPromptBuilder
+      final finalPromptBuilderComponent = session.value!.components.firstWhereOrNull(
+        (c) => c.component.type == ComponentType.finalPromptBuilder
+      );
+      
+      if (finalPromptBuilderComponent != null) {
+        // Use FinalPromptBuilder content as the single prompt section
+        promptSections.add(PromptSection(
+          id: 'final_prompt',
+          type: PromptSectionType.custom,
+          content: finalPromptBuilderComponent.component.properties['promptTemplate'] ?? '',
+          order: 0,
+        ));
+      } else {
+        // Fallback to old approach for backward compatibility
+        for (int i = 0; i < session.value!.components.length; i++) {
+          final component = session.value!.components[i];
+          if (component.component.type == ComponentType.roleDefinition) {
+            promptSections.add(PromptSection(
+              id: 'section_$i',
+              type: PromptSectionType.role,
+              content: component.component.properties['role'] ?? '',
+              order: i,
+            ));
+          } else if (component.component.type == ComponentType.taskDescription) {
+            promptSections.add(PromptSection(
+              id: 'section_$i',
+              type: PromptSectionType.task,
+              content: component.component.properties['task'] ?? '',
+              order: i,
+            ));
+          } else if (component.component.type == ComponentType.textTemplate) {
+            promptSections.add(PromptSection(
+              id: 'section_$i',
+              type: PromptSectionType.custom,
+              content: component.component.properties['content'] ?? '',
+              order: i,
+            ));
+          }
         }
       }
       

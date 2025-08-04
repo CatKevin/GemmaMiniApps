@@ -62,11 +62,37 @@ class RuntimePage extends HookWidget {
         
         Future.delayed(const Duration(milliseconds: 500), () {
           try {
-            // Build the prompt using collected data
-            final prompt = PromptBuilder.buildPrompt(
-              definition: shortcut.value!,
-              context: executionContext.value!,
-            );
+            String prompt;
+            
+            // Check if we have a FinalPromptBuilder component
+            final screens = shortcut.value!.screens;
+            UIComponent? finalPromptBuilder;
+            
+            // Find FinalPromptBuilder in screens
+            for (final screen in screens) {
+              final fpb = screen.components.firstWhereOrNull(
+                (c) => c.type == ComponentType.finalPromptBuilder
+              );
+              if (fpb != null) {
+                finalPromptBuilder = fpb;
+                break;
+              }
+            }
+            
+            if (finalPromptBuilder != null) {
+              // Use the new approach - get prompt from FinalPromptBuilder
+              final promptTemplate = finalPromptBuilder.properties['promptTemplate'] as String? ?? '';
+              prompt = PromptBuilder.buildPromptFromTemplate(
+                template: promptTemplate,
+                context: executionContext.value!,
+              );
+            } else {
+              // Fallback to old approach for backward compatibility
+              prompt = PromptBuilder.buildPrompt(
+                definition: shortcut.value!,
+                context: executionContext.value!,
+              );
+            }
             
             generatedPrompt.value = prompt;
             isLoading.value = false;
@@ -175,6 +201,10 @@ class RuntimePage extends HookWidget {
               
               // Render components
               ...currentScreen.value!.components.where((component) {
+                // Hide FinalPromptBuilder in runtime
+                if (component.type == ComponentType.finalPromptBuilder) {
+                  return false;
+                }
                 // Only show components that pass conditional display
                 return ComponentRenderer.shouldDisplay(component, executionContext.value!);
               }).map((component) {

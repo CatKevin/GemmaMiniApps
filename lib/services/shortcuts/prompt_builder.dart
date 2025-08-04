@@ -2,6 +2,14 @@ import '../../models/shortcuts/models.dart';
 
 /// Service for building prompts from shortcut definitions and collected data
 class PromptBuilder {
+  /// Build prompt from a template string directly (for FinalPromptBuilder)
+  static String buildPromptFromTemplate({
+    required String template,
+    required ExecutionContext context,
+  }) {
+    return _processTemplate(template, context);
+  }
+  
   /// Build a complete prompt from a shortcut definition and execution context
   static String buildPrompt({
     required ShortcutDefinition definition,

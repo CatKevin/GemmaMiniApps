@@ -322,6 +322,9 @@ enum ComponentType {
   taskDescription,
   textTemplate,
   exampleProvider,
+  
+  // Special component - always at the end of workflow
+  finalPromptBuilder,
 }
 
 /// Variable definition

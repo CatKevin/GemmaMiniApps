@@ -570,6 +570,35 @@ class ComponentTemplateLibrary {
         ),
       ],
     ),
+    
+    // Special Final Prompt Builder Component
+    ComponentTemplate(
+      id: 'final-prompt-builder',
+      name: 'Final Prompt Builder',
+      description: 'Build your final prompt with variables',
+      icon: Icons.auto_awesome,
+      category: ComponentCategory.prompt,
+      type: ComponentType.finalPromptBuilder,
+      defaultProperties: {
+        'promptTemplate': 'Enter your prompt here. Use {{variableName}} to insert variables.',
+        'enablePreview': true,
+        'previewVariables': <String, dynamic>{},
+      },
+      editableProperties: [
+        ComponentProperty(
+          key: 'promptTemplate',
+          label: 'Prompt Template',
+          type: PropertyType.richText,
+          required: true,
+        ),
+        ComponentProperty(
+          key: 'enablePreview',
+          label: 'Enable Preview',
+          type: PropertyType.boolean,
+          defaultValue: true,
+        ),
+      ],
+    ),
   ];
 
   static ComponentTemplate? getTemplate(ComponentType type) {
