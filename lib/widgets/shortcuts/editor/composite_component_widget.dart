@@ -1039,9 +1039,11 @@ class CompositeComponentWidget extends HookWidget {
                 ],
               ),
             ),
-            // Component Panel
+            // Component Panel Content (without double wrapper)
             Expanded(
-              child: ComponentPanel(
+              child: ComponentPanelContent(
+                title: null,  // Title is already shown in the header above
+                showCloseButton: false,  // Close button is already in the header
                 onComponentSelected: (template) {
                   // Create new component from template
                   final newComponent = EditableComponent(
@@ -1058,8 +1060,7 @@ class CompositeComponentWidget extends HookWidget {
                   // Add to section
                   onAddComponent(section.id, newComponent);
                   
-                  // Note: ComponentPanel already handles closing the bottom sheet
-                  // No need to call Get.back() here
+                  // ComponentPanelContent will handle closing the bottom sheet
                 },
               ),
             ),
