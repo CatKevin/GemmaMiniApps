@@ -318,11 +318,21 @@ class SwitchCaseComponent extends CompositeComponent {
   }
 
   factory SwitchCaseComponent.fromJson(Map<String, dynamic> json) {
-    return SwitchCaseComponent(
+    final component = SwitchCaseComponent(
       id: json['id'],
       switchVariable: json['switchVariable'],
       caseOptions: List<String>.from(json['caseOptions']),
     );
+    
+    // Restore sections with their children
+    if (json['sections'] != null) {
+      component.sections.clear();
+      for (final sectionJson in json['sections']) {
+        component.sections.add(ComponentSection.fromJson(sectionJson));
+      }
+    }
+    
+    return component;
   }
 }
 

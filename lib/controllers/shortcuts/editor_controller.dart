@@ -69,11 +69,44 @@ class EditorController extends GetxController {
     
     for (final screen in screens) {
       for (final component in screen.components) {
-        components.add(EditableComponent(
-          id: '${screen.id}_${component.id}',
-          component: component,
-          order: order++,
-        ));
+        // Check if this is a composite component
+        if (component.properties['isComposite'] == true) {
+          // Reconstruct the composite component
+          final compositeData = component.properties['compositeData'] as Map<String, dynamic>?;
+          if (compositeData != null) {
+            try {
+              final compositeComponent = CompositeComponent.fromJson(compositeData);
+              components.add(EditableComponent(
+                id: compositeComponent.id,
+                component: component,
+                order: order++,
+                isComposite: true,
+                compositeComponent: compositeComponent,
+              ));
+            } catch (e) {
+              // If reconstruction fails, add as regular component
+              components.add(EditableComponent(
+                id: '${screen.id}_${component.id}',
+                component: component,
+                order: order++,
+              ));
+            }
+          } else {
+            // No composite data, add as regular component
+            components.add(EditableComponent(
+              id: '${screen.id}_${component.id}',
+              component: component,
+              order: order++,
+            ));
+          }
+        } else {
+          // Regular component
+          components.add(EditableComponent(
+            id: '${screen.id}_${component.id}',
+            component: component,
+            order: order++,
+          ));
+        }
       }
     }
     
@@ -230,11 +263,93 @@ class EditorController extends GetxController {
   void removeComponent(String componentId) {
     if (session.value == null) return;
     
-    final updatedComponents = session.value!.components
-        .where((c) => c.id != componentId)
-        .toList();
+    // First try to remove from main list
+    final componentIndex = session.value!.components
+        .indexWhere((c) => c.id == componentId);
     
-    // Reorder remaining components
+    if (componentIndex != -1) {
+      // Found in main list
+      final updatedComponents = session.value!.components
+          .where((c) => c.id != componentId)
+          .toList();
+      
+      // Reorder remaining components
+      for (int i = 0; i < updatedComponents.length; i++) {
+        updatedComponents[i] = updatedComponents[i].copyWith(order: i);
+      }
+      
+      session.value = session.value!.copyWith(
+        components: updatedComponents,
+        hasUnsavedChanges: true,
+        lastModified: DateTime.now(),
+      );
+      return;
+    }
+    
+    // Not found in main list, search in composite component sections
+    for (final comp in session.value!.components) {
+      if (comp.isComposite && comp.compositeComponent != null) {
+        for (final section in comp.compositeComponent!.sections) {
+          final childIndex = section.children.indexWhere((c) => c.id == componentId);
+          if (childIndex != -1) {
+            // Remove from section
+            section.children.removeAt(childIndex);
+            
+            // Update order values in section
+            for (int i = 0; i < section.children.length; i++) {
+              section.children[i] = section.children[i].copyWith(order: i);
+            }
+            
+            // Force UI update
+            session.value = session.value!.copyWith(
+              hasUnsavedChanges: true,
+              lastModified: DateTime.now(),
+            );
+            return;
+          }
+        }
+      }
+    }
+  }
+  
+  /// Move component from section to main list
+  void moveComponentToMainList(String componentId, int targetIndex) {
+    if (session.value == null) return;
+    
+    EditableComponent? componentToMove;
+    
+    // Find and remove component from section
+    for (final comp in session.value!.components) {
+      if (comp.isComposite && comp.compositeComponent != null) {
+        for (final section in comp.compositeComponent!.sections) {
+          final childIndex = section.children.indexWhere((c) => c.id == componentId);
+          if (childIndex != -1) {
+            componentToMove = section.children.removeAt(childIndex);
+            
+            // Update order values in section
+            for (int i = 0; i < section.children.length; i++) {
+              section.children[i] = section.children[i].copyWith(order: i);
+            }
+            break;
+          }
+        }
+        if (componentToMove != null) break;
+      }
+    }
+    
+    if (componentToMove == null) return;
+    
+    // Clear parent section ID
+    componentToMove = componentToMove.copyWith(
+      parentSectionId: null,
+      order: targetIndex,
+    );
+    
+    // Add to main list
+    final updatedComponents = List<EditableComponent>.from(session.value!.components);
+    updatedComponents.insert(targetIndex, componentToMove);
+    
+    // Update order values
     for (int i = 0; i < updatedComponents.length; i++) {
       updatedComponents[i] = updatedComponents[i].copyWith(order: i);
     }
@@ -250,45 +365,96 @@ class EditorController extends GetxController {
   void updateComponentProperty(String componentId, String key, dynamic value) {
     if (session.value == null) return;
     
+    // First try to find in main components list
     final componentIndex = session.value!.components
         .indexWhere((c) => c.id == componentId);
     
-    if (componentIndex == -1) return;
-    
-    final component = session.value!.components[componentIndex];
-    final updatedProperties = Map<String, dynamic>.from(component.component.properties)
-      ..[key] = value;
-    
-    UIComponent updatedUIComponent;
-    
-    // Handle special cases
-    if (key == 'variableBinding') {
-      updatedUIComponent = component.component.copyWith(
-        variableBinding: value as String?,
+    if (componentIndex != -1) {
+      // Found in main list
+      final component = session.value!.components[componentIndex];
+      final updatedProperties = Map<String, dynamic>.from(component.component.properties)
+        ..[key] = value;
+      
+      UIComponent updatedUIComponent;
+      
+      // Handle special cases
+      if (key == 'variableBinding') {
+        updatedUIComponent = component.component.copyWith(
+          variableBinding: value as String?,
+        );
+        
+        // Auto-register variable if it doesn't exist
+        if (value != null && value.toString().isNotEmpty) {
+          _registerVariable(value.toString(), component.component.type);
+        }
+      } else {
+        updatedUIComponent = component.component.copyWith(
+          properties: updatedProperties,
+        );
+      }
+      
+      final updatedComponent = component.copyWith(
+        component: updatedUIComponent,
       );
       
-      // Auto-register variable if it doesn't exist
-      if (value != null && value.toString().isNotEmpty) {
-        _registerVariable(value.toString(), component.component.type);
-      }
-    } else {
-      updatedUIComponent = component.component.copyWith(
-        properties: updatedProperties,
+      final updatedComponents = List<EditableComponent>.from(session.value!.components);
+      updatedComponents[componentIndex] = updatedComponent;
+      
+      session.value = session.value!.copyWith(
+        components: updatedComponents,
+        hasUnsavedChanges: true,
+        lastModified: DateTime.now(),
       );
+      return;
     }
     
-    final updatedComponent = component.copyWith(
-      component: updatedUIComponent,
-    );
-    
-    final updatedComponents = List<EditableComponent>.from(session.value!.components);
-    updatedComponents[componentIndex] = updatedComponent;
-    
-    session.value = session.value!.copyWith(
-      components: updatedComponents,
-      hasUnsavedChanges: true,
-      lastModified: DateTime.now(),
-    );
+    // Not found in main list, search in composite component sections
+    for (int i = 0; i < session.value!.components.length; i++) {
+      final comp = session.value!.components[i];
+      if (comp.isComposite && comp.compositeComponent != null) {
+        for (final section in comp.compositeComponent!.sections) {
+          final childIndex = section.children.indexWhere((c) => c.id == componentId);
+          if (childIndex != -1) {
+            // Found in section
+            final child = section.children[childIndex];
+            final updatedProperties = Map<String, dynamic>.from(child.component.properties)
+              ..[key] = value;
+            
+            UIComponent updatedUIComponent;
+            
+            // Handle special cases
+            if (key == 'variableBinding') {
+              updatedUIComponent = child.component.copyWith(
+                variableBinding: value as String?,
+              );
+              
+              // Auto-register variable if it doesn't exist
+              if (value != null && value.toString().isNotEmpty) {
+                _registerVariable(value.toString(), child.component.type);
+              }
+            } else {
+              updatedUIComponent = child.component.copyWith(
+                properties: updatedProperties,
+              );
+            }
+            
+            final updatedChild = child.copyWith(
+              component: updatedUIComponent,
+            );
+            
+            // Update the child in section
+            section.children[childIndex] = updatedChild;
+            
+            // Force UI update by updating session
+            session.value = session.value!.copyWith(
+              hasUnsavedChanges: true,
+              lastModified: DateTime.now(),
+            );
+            return;
+          }
+        }
+      }
+    }
   }
   
   /// Toggle component expansion
@@ -472,9 +638,7 @@ class EditorController extends GetxController {
       final screen = ScreenDefinition(
         id: 'main',
         title: name,
-        components: session.value!.components
-            .map((e) => e.component)
-            .toList(),
+        components: _extractAllComponents(session.value!.components),
         actions: {
           'submit': ScreenAction(
             type: ActionType.submit,
@@ -557,6 +721,36 @@ class EditorController extends GetxController {
   
   /// Check if there are unsaved changes
   bool get hasUnsavedChanges => session.value?.hasUnsavedChanges ?? false;
+  
+  /// Extract all components including those inside composite components
+  List<UIComponent> _extractAllComponents(List<EditableComponent> editableComponents) {
+    final components = <UIComponent>[];
+    
+    for (final editableComp in editableComponents) {
+      if (editableComp.isComposite && editableComp.compositeComponent != null) {
+        // Create a special UIComponent that represents the composite component
+        final compositeComp = editableComp.compositeComponent!;
+        
+        // Create composite UI component with all necessary data
+        final compositeUIComponent = UIComponent(
+          id: compositeComp.id,
+          type: ComponentType.groupContainer, // Use groupContainer as base type
+          properties: {
+            'isComposite': true,
+            'compositeType': compositeComp.type.toString(),
+            'compositeData': compositeComp.toJson(),
+          },
+        );
+        
+        components.add(compositeUIComponent);
+      } else {
+        // Regular component
+        components.add(editableComp.component);
+      }
+    }
+    
+    return components;
+  }
   
   @override
   void onClose() {

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import '../../../core/theme/models/theme_config.dart';
 import '../../../models/shortcuts/models.dart';
+import '../../../models/shortcuts/composite_component.dart';
 
 /// Factory for rendering UI components dynamically
 class ComponentRenderer {
@@ -12,6 +13,16 @@ class ComponentRenderer {
     required Function(String, dynamic) onValueChanged,
     required ThemeConfig theme,
   }) {
+    // Check if this is a composite component
+    if (component.properties['isComposite'] == true) {
+      return _CompositeComponentRenderer(
+        component: component,
+        context: context,
+        onValueChanged: onValueChanged,
+        theme: theme,
+      );
+    }
+    
     switch (component.type) {
       // Input Components
       case ComponentType.textInput:
@@ -1740,6 +1751,309 @@ class _UnknownComponent extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Composite component renderer
+class _CompositeComponentRenderer extends HookWidget {
+  final UIComponent component;
+  final ExecutionContext context;
+  final Function(String, dynamic) onValueChanged;
+  final ThemeConfig theme;
+
+  const _CompositeComponentRenderer({
+    required this.component,
+    required this.context,
+    required this.onValueChanged,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Extract composite data
+    final compositeData = component.properties['compositeData'] as Map<String, dynamic>?;
+    if (compositeData == null) {
+      return _UnknownComponent(component: component, theme: theme);
+    }
+
+    // Reconstruct composite component
+    final compositeComponent = CompositeComponent.fromJson(compositeData);
+    
+    // Render based on type
+    switch (compositeComponent.type) {
+      case CompositeComponentType.ifElse:
+        return _renderIfElse(compositeComponent as IfElseComponent);
+      case CompositeComponentType.switchCase:
+        return _renderSwitchCase(compositeComponent as SwitchCaseComponent);
+      default:
+        return Container(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            'Unsupported composite type: ${compositeComponent.type}',
+            style: TextStyle(color: theme.error),
+          ),
+        );
+    }
+  }
+
+  Widget _renderIfElse(IfElseComponent ifElseComponent) {
+    // Evaluate condition
+    final condition = ifElseComponent.sections.first.properties['expression'] ?? '';
+    final isTrue = this.context.evaluateCondition(condition);
+    
+    // Find the appropriate section to render
+    ComponentSection? sectionToRender;
+    
+    // Check main IF condition
+    if (isTrue) {
+      sectionToRender = ifElseComponent.sections.firstWhere((s) => s.label == 'THEN');
+    } else {
+      // Check ELSE IF conditions
+      for (final section in ifElseComponent.sections) {
+        if (section.label == 'ELSE IF') {
+          final elseIfCondition = section.properties['expression'] ?? '';
+          if (this.context.evaluateCondition(elseIfCondition)) {
+            sectionToRender = section;
+            break;
+          }
+        }
+      }
+      
+      // If no ELSE IF matched, use ELSE
+      if (sectionToRender == null) {
+        sectionToRender = ifElseComponent.sections.firstWhere((s) => s.label == 'ELSE');
+      }
+    }
+    
+    return _renderSection(sectionToRender, 'IF-ELSE: $condition');
+  }
+  
+  Widget _renderSwitchCase(SwitchCaseComponent switchCaseComponent) {
+    // Get the switch variable value
+    final switchVar = switchCaseComponent.switchVariable;
+    
+    // State to track selected option and whether to show content
+    final selectedOption = useState<String?>(context.getVariable(switchVar)?.toString());
+    final showContent = useState(false);
+    
+    // Extract available options from case sections
+    final options = <String>[];
+    for (final section in switchCaseComponent.sections) {
+      if (section.type == CompositeSectionType.caseOption) {
+        final caseValue = section.properties['value'] as String?;
+        if (caseValue != null) {
+          options.add(caseValue);
+        }
+      }
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Show option buttons if content is not shown yet
+        if (!showContent.value) ...[
+          // Title
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            child: Text(
+              'Select an option:',
+              style: TextStyle(
+                color: theme.onBackground,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          
+          // Option buttons
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: options.map((option) {
+              final isSelected = selectedOption.value == option;
+              return Material(
+                borderRadius: BorderRadius.circular(12),
+                color: isSelected ? theme.primary : theme.surface,
+                child: InkWell(
+                  onTap: () {
+                    selectedOption.value = option;
+                    // Update the variable but don't show content yet
+                    onValueChanged(switchVar, option);
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected 
+                            ? theme.primary 
+                            : theme.onSurface.withValues(alpha: 0.2),
+                        width: 2,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isSelected)
+                          Icon(
+                            Icons.check_circle,
+                            color: theme.onPrimary,
+                            size: 20,
+                          ),
+                        if (isSelected)
+                          const SizedBox(width: 8),
+                        Text(
+                          option,
+                          style: TextStyle(
+                            color: isSelected ? theme.onPrimary : theme.onSurface,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          
+          // Next button
+          if (selectedOption.value != null) ...[
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  showContent.value = true;
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.primary,
+                  foregroundColor: theme.onPrimary,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'NEXT',
+                  style: TextStyle(
+                    letterSpacing: 1.2,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+        
+        // Show selected content after clicking next
+        if (showContent.value && selectedOption.value != null) ...[
+          // Back button
+          TextButton.icon(
+            onPressed: () {
+              showContent.value = false;
+            },
+            icon: Icon(Icons.arrow_back, color: theme.primary),
+            label: Text(
+              'Back to options',
+              style: TextStyle(color: theme.primary),
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Find and render the selected section
+          Builder(builder: (context) {
+            ComponentSection? sectionToRender;
+            
+            for (final section in switchCaseComponent.sections) {
+              if (section.type == CompositeSectionType.caseOption) {
+                final caseValue = section.properties['value'] as String?;
+                if (caseValue == selectedOption.value) {
+                  sectionToRender = section;
+                  break;
+                }
+              }
+            }
+            
+            // If no case matched, use DEFAULT
+            sectionToRender ??= switchCaseComponent.sections.firstWhere(
+              (s) => s.type == CompositeSectionType.default_,
+              orElse: () => ComponentSection(
+                id: 'empty',
+                label: 'DEFAULT',
+                type: CompositeSectionType.default_,
+              ),
+            );
+            
+            return _renderSection(sectionToRender, 'Option: ${selectedOption.value}');
+          }),
+        ],
+      ],
+    );
+  }
+  
+  Widget _renderSection(ComponentSection section, String debugInfo) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Debug info (can be removed in production)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          margin: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            color: theme.surface.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.alt_route,
+                size: 16,
+                color: theme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                debugInfo,
+                style: TextStyle(
+                  color: theme.onSurface,
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Render children components
+        Container(
+          margin: const EdgeInsets.only(left: 16),
+          padding: const EdgeInsets.only(left: 16),
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(
+                color: theme.primary.withValues(alpha: 0.3),
+                width: 2,
+              ),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: section.children.map((editableComp) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: ComponentRenderer.render(
+                  component: editableComp.component,
+                  context: this.context,
+                  onValueChanged: onValueChanged,
+                  theme: theme,
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 }
