@@ -15,17 +15,12 @@ class DragHelper {
 
   /// Get the drag type of an item
   static DragType getDragType(EditableComponent component) {
-    // Composite components themselves cannot be dragged when expanded
-    if (component.isComposite && component.isExpanded) {
-      return DragType.forbidden;
-    }
-    
     // Components inside sections have limited drag scope
     if (component.parentSectionId != null) {
       return DragType.sectionContent;
     }
     
-    // Regular components can be dragged freely
+    // Both regular and composite components can be dragged freely
     return DragType.component;
   }
 
@@ -43,8 +38,8 @@ class DragHelper {
         return false;
         
       case DragType.sectionContent:
-        // Section content can only be dropped within the same section
-        return draggedItem.parentSectionId == targetSectionId;
+        // Section content can be dropped within the same section OR to the main list
+        return draggedItem.parentSectionId == targetSectionId || targetSectionId == null;
         
       case DragType.component:
         // Regular components can be dropped in main list or empty sections

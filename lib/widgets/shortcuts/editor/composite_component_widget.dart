@@ -9,6 +9,7 @@ import '../../../models/shortcuts/shortcut_definition.dart';
 import '../../../models/shortcuts/variable.dart';
 import 'component_panel.dart';
 import 'property_editor.dart';
+import 'cross_container_draggable.dart';
 
 /// Widget for rendering composite components (IF-ELSE, SWITCH-CASE, etc.)
 class CompositeComponentWidget extends HookWidget {
@@ -89,6 +90,13 @@ class CompositeComponentWidget extends HookWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
+                // Drag handle
+                Icon(
+                  Icons.drag_handle,
+                  color: theme.onBackground.withValues(alpha: 0.4),
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
                 Icon(
                   _getComponentIcon(component.type),
                   color: _getComponentColor(component.type),
@@ -503,13 +511,10 @@ class CompositeComponentWidget extends HookWidget {
             constraints: const BoxConstraints(minHeight: 80),
             child: section.children.isEmpty
                 ? _buildEmptyPlaceholder(section, theme)
-                : ReorderableListView.builder(
+                : ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: section.children.length,
-                    onReorder: (oldIndex, newIndex) {
-                      onReorderInSection(oldIndex, newIndex, section.id);
-                    },
                     itemBuilder: (context, index) {
                       final child = section.children[index];
                       return _buildDraggableChild(
@@ -837,29 +842,32 @@ class _DraggableChildWidget extends HookWidget {
     // Track expansion state
     final isExpanded = useState(false);
     
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: theme.surface,
-        border: Border.all(
-          color: theme.onBackground.withValues(alpha: 0.1),
+    return CrossContainerDraggable(
+      component: child,
+      sectionId: section.id,
+      index: index,
+      enabled: true,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: theme.surface,
+          border: Border.all(
+            color: theme.onBackground.withValues(alpha: 0.1),
+          ),
+          borderRadius: BorderRadius.circular(8),
         ),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          // Component header
-          InkWell(
-            onTap: () => isExpanded.value = !isExpanded.value,
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Row(
-                children: [
-                  // Drag handle
-                  ReorderableDragStartListener(
-                    index: index,
-                    child: Padding(
+        child: Column(
+          children: [
+            // Component header
+            InkWell(
+              onTap: () => isExpanded.value = !isExpanded.value,
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Row(
+                  children: [
+                    // Drag handle
+                    Padding(
                       padding: const EdgeInsets.all(8),
                       child: Icon(
                         Icons.drag_handle,
@@ -867,7 +875,6 @@ class _DraggableChildWidget extends HookWidget {
                         size: 18,
                       ),
                     ),
-                  ),
                   // Component icon
                   Container(
                     padding: const EdgeInsets.all(6),
@@ -945,6 +952,7 @@ class _DraggableChildWidget extends HookWidget {
             ),
         ],
       ),
+    ),
     );
   }
 

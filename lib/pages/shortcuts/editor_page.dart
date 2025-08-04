@@ -11,6 +11,7 @@ import '../../widgets/shortcuts/editor/variable_definition_section.dart';
 import '../../widgets/shortcuts/editor/draggable_component_card.dart';
 import '../../widgets/shortcuts/editor/composite_component_widget.dart';
 import '../../widgets/shortcuts/editor/composite_component_panel.dart';
+import '../../widgets/shortcuts/editor/cross_container_draggable.dart';
 import '../../services/shortcuts/storage_service.dart';
 import '../routes.dart';
 
@@ -437,102 +438,175 @@ class EditorPage extends HookWidget {
                                     ],
                                   ),
                                 )
-                              : ReorderableListView.builder(
+                              : ListView.builder(
                                   shrinkWrap: true,
                                   physics: const NeverScrollableScrollPhysics(),
                                   padding: EdgeInsets.zero,
-                                  itemCount: session.components.length,
-                                  onReorder: controller.reorderComponents,
-                                  proxyDecorator: (child, index, animation) {
-                                    return AnimatedBuilder(
-                                      animation: animation,
-                                      builder: (context, child) {
-                                        final double animValue = Curves.easeInOut.transform(animation.value);
-                                        final double scale = 1.0 + (animValue * 0.05);
-                                        return Transform.scale(
-                                          scale: scale,
-                                          child: child,
-                                        );
-                                      },
-                                      child: child,
-                                    );
-                                  },
+                                  itemCount: session.components.length + 1, // +1 for the drop zone at the end
                                   itemBuilder: (context, index) {
-                                    final component = session.components[index];
-                                    
-                                    // Check if it's a composite component
-                                    if (component.isComposite && component.compositeComponent != null) {
-                                      return CompositeComponentWidget(
-                                        key: ValueKey(component.id),
-                                        component: component.compositeComponent!,
-                                        isExpanded: component.isExpanded,
-                                        onToggleExpand: () {
-                                          controller.toggleComponentExpansion(component.id);
+                                    // Drop zone at the end
+                                    if (index == session.components.length) {
+                                      return ComponentDropTarget(
+                                        targetIndex: index,
+                                        targetSectionId: null,
+                                        showDropIndicator: false,
+                                        onAccept: (dragData, targetIndex) {
+                                          // Handle drop from section to main list
+                                          if (dragData.sourceSectionId != null) {
+                                            controller.moveComponentToMainList(
+                                              dragData.component.id,
+                                              targetIndex,
+                                            );
+                                          } else {
+                                            // Regular reorder within main list
+                                            controller.reorderComponents(
+                                              dragData.sourceIndex,
+                                              targetIndex,
+                                            );
+                                          }
                                         },
-                                        onDelete: () {
-                                          controller.removeComponent(component.id);
-                                        },
-                                        onAddComponent: (sectionId, newComponent) {
-                                          controller.addComponentToSection(sectionId, newComponent);
-                                        },
-                                        onRemoveComponent: (componentId) {
-                                          controller.removeComponent(componentId);
-                                        },
-                                        onReorderInSection: (oldIndex, newIndex, sectionId) {
-                                          controller.reorderComponentsInSection(
-                                            oldIndex,
-                                            newIndex,
-                                            sectionId,
-                                          );
-                                        },
-                                        onPropertyChanged: (componentId, key, value) {
-                                          controller.updateComponentProperty(
-                                            componentId,
-                                            key,
-                                            value,
-                                          );
-                                        },
-                                        availableVariables: variables.value,
-                                        onAddVariable: handleAddVariable,
-                                      );
-                                    } else {
-                                      // Regular component
-                                      final template = ComponentTemplateLibrary.getTemplate(
-                                        component.component.type,
-                                      );
-
-                                      return DraggableComponentCard(
-                                        key: ValueKey(component.id),
-                                        component: component,
-                                        template: template,
-                                        index: index,
-                                        totalCount: session.components.length,
-                                        theme: theme,
-                                        onExpand: () {
-                                          controller.toggleComponentExpansion(component.id);
-                                        },
-                                        onDelete: () {
-                                          controller.removeComponent(component.id);
-                                        },
-                                        onMoveUp: index > 0 ? () {
-                                          HapticFeedback.lightImpact();
-                                          controller.reorderComponents(index, index - 1);
-                                        } : null,
-                                        onMoveDown: index < session.components.length - 1 ? () {
-                                          HapticFeedback.lightImpact();
-                                          controller.reorderComponents(index, index + 1);
-                                        } : null,
-                                        onPropertyChanged: (key, value) {
-                                          controller.updateComponentProperty(
-                                            component.id,
-                                            key,
-                                            value,
-                                          );
-                                        },
-                                        availableVariables: variables.value,
-                                        onAddVariable: handleAddVariable,
+                                        child: Container(
+                                          height: 80,
+                                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                                          child: Center(
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 24,
+                                                vertical: 12,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                  color: theme.onBackground.withValues(alpha: 0.1),
+                                                  style: BorderStyle.solid,
+                                                ),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                'Drop components here',
+                                                style: TextStyle(
+                                                  color: theme.onBackground.withValues(alpha: 0.3),
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       );
                                     }
+                                    
+                                    final component = session.components[index];
+                                    
+                                    // Wrap components with drop target
+                                    return ComponentDropTarget(
+                                      targetIndex: index,
+                                      targetSectionId: null,
+                                      onAccept: (dragData, targetIndex) {
+                                        // Handle drop from section to main list
+                                        if (dragData.sourceSectionId != null) {
+                                          controller.moveComponentToMainList(
+                                            dragData.component.id,
+                                            targetIndex,
+                                          );
+                                        } else {
+                                          // Regular reorder within main list
+                                          int sourceIndex = dragData.sourceIndex;
+                                          if (sourceIndex > targetIndex) {
+                                            // Moving up
+                                            controller.reorderComponents(sourceIndex, targetIndex);
+                                          } else {
+                                            // Moving down
+                                            controller.reorderComponents(sourceIndex, targetIndex - 1);
+                                          }
+                                        }
+                                      },
+                                      child: Builder(
+                                        builder: (context) {
+                                          // Check if it's a composite component
+                                          if (component.isComposite && component.compositeComponent != null) {
+                                            return CrossContainerDraggable(
+                                              component: component,
+                                              index: index,
+                                              sectionId: null,
+                                              child: CompositeComponentWidget(
+                                                key: ValueKey(component.id),
+                                                component: component.compositeComponent!,
+                                                isExpanded: component.isExpanded,
+                                                onToggleExpand: () {
+                                                  controller.toggleComponentExpansion(component.id);
+                                                },
+                                                onDelete: () {
+                                                  controller.removeComponent(component.id);
+                                                },
+                                                onAddComponent: (sectionId, newComponent) {
+                                                  controller.addComponentToSection(sectionId, newComponent);
+                                                },
+                                                onRemoveComponent: (componentId) {
+                                                  controller.removeComponent(componentId);
+                                                },
+                                                onReorderInSection: (oldIndex, newIndex, sectionId) {
+                                                  controller.reorderComponentsInSection(
+                                                    oldIndex,
+                                                    newIndex,
+                                                    sectionId,
+                                                  );
+                                                },
+                                                onPropertyChanged: (componentId, key, value) {
+                                                  controller.updateComponentProperty(
+                                                    componentId,
+                                                    key,
+                                                    value,
+                                                  );
+                                                },
+                                                availableVariables: variables.value,
+                                                onAddVariable: handleAddVariable,
+                                              ),
+                                            );
+                                          } else {
+                                            // Regular component
+                                            final template = ComponentTemplateLibrary.getTemplate(
+                                              component.component.type,
+                                            );
+
+                                            return CrossContainerDraggable(
+                                              component: component,
+                                              index: index,
+                                              sectionId: null,
+                                              child: DraggableComponentCard(
+                                                key: ValueKey(component.id),
+                                                component: component,
+                                                template: template,
+                                                index: index,
+                                                totalCount: session.components.length,
+                                                theme: theme,
+                                                onExpand: () {
+                                                  controller.toggleComponentExpansion(component.id);
+                                                },
+                                                onDelete: () {
+                                                  controller.removeComponent(component.id);
+                                                },
+                                                onMoveUp: index > 0 ? () {
+                                                  HapticFeedback.lightImpact();
+                                                  controller.reorderComponents(index, index - 1);
+                                                } : null,
+                                                onMoveDown: index < session.components.length - 1 ? () {
+                                                  HapticFeedback.lightImpact();
+                                                  controller.reorderComponents(index, index + 1);
+                                                } : null,
+                                                onPropertyChanged: (key, value) {
+                                                  controller.updateComponentProperty(
+                                                    component.id,
+                                                    key,
+                                                    value,
+                                                  );
+                                                },
+                                                availableVariables: variables.value,
+                                                onAddVariable: handleAddVariable,
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    );
                                   },
                               ),
                           ],
