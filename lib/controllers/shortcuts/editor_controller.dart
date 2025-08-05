@@ -589,6 +589,16 @@ class EditorController extends GetxController {
         if (value != null && value.toString().isNotEmpty) {
           _registerVariable(value.toString(), component.component.type);
         }
+      } else if (key == 'outputVariable' && 
+                 component.component.type == ComponentType.textTemplate) {
+        updatedUIComponent = component.component.copyWith(
+          properties: updatedProperties,
+        );
+        
+        // Auto-register output variable for text template component
+        if (value != null && value.toString().isNotEmpty) {
+          _registerVariable(value.toString(), ComponentType.textInput); // Use textInput type for string variables
+        }
       } else {
         updatedUIComponent = component.component.copyWith(
           properties: updatedProperties,
@@ -633,6 +643,16 @@ class EditorController extends GetxController {
               // Auto-register variable if it doesn't exist
               if (value != null && value.toString().isNotEmpty) {
                 _registerVariable(value.toString(), child.component.type);
+              }
+            } else if (key == 'outputVariable' && 
+                       child.component.type == ComponentType.textTemplate) {
+              updatedUIComponent = child.component.copyWith(
+                properties: updatedProperties,
+              );
+              
+              // Auto-register output variable for text template component
+              if (value != null && value.toString().isNotEmpty) {
+                _registerVariable(value.toString(), ComponentType.textInput); // Use textInput type for string variables
               }
             } else {
               updatedUIComponent = child.component.copyWith(

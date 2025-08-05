@@ -331,12 +331,28 @@ class DraggableComponentCard extends HookWidget {
   }
 
   String _getComponentTitle(UIComponent component) {
+    // For text template, show content preview
+    if (component.type == ComponentType.textTemplate && 
+        component.properties['content'] != null &&
+        component.properties['content'].toString().isNotEmpty) {
+      final content = component.properties['content'].toString();
+      // Remove HTML tags and truncate for preview
+      final plainText = content.replaceAll(RegExp(r'<[^>]*>'), '');
+      return plainText.length > 30 ? '${plainText.substring(0, 30)}...' : plainText;
+    }
+    
     return component.properties['label'] ??
         component.properties['title'] ??
         component.type.toString().split('.').last;
   }
 
   String _getComponentSubtitle(UIComponent component) {
+    // Check for output variable (for text template and other components)
+    if (component.properties['outputVariable'] != null && 
+        component.properties['outputVariable'].toString().isNotEmpty) {
+      return 'Output: ${component.properties['outputVariable']}';
+    }
+    // Check for input variable binding
     if (component.variableBinding != null) {
       return 'Variable: ${component.variableBinding}';
     }

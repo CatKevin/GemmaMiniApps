@@ -473,16 +473,16 @@ class ComponentTemplateLibrary {
       },
       editableProperties: [
         ComponentProperty(
-          key: 'title',
-          label: 'Component Title',
-          type: PropertyType.text,
-          required: true,
-        ),
-        ComponentProperty(
           key: 'content',
           label: 'Content',
           type: PropertyType.richText,
           required: true,
+        ),
+        ComponentProperty(
+          key: 'outputVariable',
+          label: 'Output Variable',
+          type: PropertyType.variable,
+          required: false,
         ),
       ],
     ),
