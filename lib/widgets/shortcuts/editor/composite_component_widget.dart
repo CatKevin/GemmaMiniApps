@@ -440,7 +440,8 @@ class CompositeComponentWidget extends HookWidget {
                       ),
                       onPressed: () {
                         switchComponent.removeCase(option);
-                        onToggleExpand(); // Refresh UI
+                        // Trigger UI update without changing expansion state
+                        onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
                       },
                     ),
                 ],
@@ -476,7 +477,8 @@ class CompositeComponentWidget extends HookWidget {
                     if (value.isNotEmpty && !switchComponent.caseOptions.contains(value)) {
                       switchComponent.addCase(value);
                       newOptionController.clear();
-                      onToggleExpand(); // Refresh UI
+                      // Trigger UI update without changing expansion state
+                      onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
                     }
                   },
                 ),
@@ -492,7 +494,8 @@ class CompositeComponentWidget extends HookWidget {
                   if (value.isNotEmpty && !switchComponent.caseOptions.contains(value)) {
                     switchComponent.addCase(value);
                     newOptionController.clear();
-                    onToggleExpand(); // Refresh UI
+                    // Trigger UI update without changing expansion state
+                    onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
                   }
                 },
               ),
@@ -559,7 +562,8 @@ class CompositeComponentWidget extends HookWidget {
                         onPressed: () {
                           if (component is IfElseComponent) {
                             (component as IfElseComponent).removeElseIf(section.id);
-                            onToggleExpand(); // Refresh UI
+                            // Trigger UI update without changing expansion state
+                            onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
                           }
                         },
                       ),
@@ -579,7 +583,8 @@ class CompositeComponentWidget extends HookWidget {
                           final caseValue = section.properties['value'];
                           if (caseValue != null) {
                             (component as SwitchCaseComponent).removeCase(caseValue);
-                            onToggleExpand(); // Refresh UI
+                            // Trigger UI update without changing expansion state
+                            onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
                           }
                         },
                       ),
