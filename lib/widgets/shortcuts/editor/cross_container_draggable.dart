@@ -120,6 +120,7 @@ class _CrossContainerDraggableState extends State<CrossContainerDraggable>
                   sourceSectionId: widget.sectionId,
                   sourceIndex: widget.index,
                 ),
+                delay: const Duration(milliseconds: 200), // Shorter delay for better responsiveness
                 onDragStarted: () {
                   HapticFeedback.mediumImpact();
                   widget.onDragStarted?.call();

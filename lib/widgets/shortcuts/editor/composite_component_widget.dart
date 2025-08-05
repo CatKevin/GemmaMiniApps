@@ -42,119 +42,119 @@ class CompositeComponentWidget extends HookWidget {
   Widget build(BuildContext context) {
     final theme = ThemeController.to.currentThemeConfig;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: _getComponentColor(component.type).withValues(alpha: 0.3),
-          width: 2,
-        ),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: theme.onBackground.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    // Add a visual indicator to show the entire component can be dragged
+    return MouseRegion(
+      cursor: SystemMouseCursors.move,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: _getComponentColor(component.type).withValues(alpha: 0.3),
+            width: 2,
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Composite component header
-          _buildHeader(context, theme),
-          // Sections
-          if (isExpanded) ..._buildSections(context, theme),
-        ],
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: theme.onBackground.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Composite component header
+            _buildHeader(context, theme),
+            // Sections
+            if (isExpanded) ..._buildSections(context, theme),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildHeader(BuildContext context, dynamic theme) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _getComponentColor(component.type).withValues(alpha: 0.1),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(10),
-          topRight: Radius.circular(10),
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onToggleExpand,
+    final isDragging = useState(false);
+    
+    return GestureDetector(
+      onTap: onToggleExpand,
+      child: Container(
+        decoration: BoxDecoration(
+          color: _getComponentColor(component.type).withValues(alpha: 0.1),
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(10),
             topRight: Radius.circular(10),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                // Drag handle
-                Icon(
-                  Icons.drag_handle,
-                  color: theme.onBackground.withValues(alpha: 0.4),
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Icon(
-                  _getComponentIcon(component.type),
-                  color: _getComponentColor(component.type),
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _getComponentTitle(component),
-                        style: TextStyle(
-                          color: theme.onBackground,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      if (component is IfElseComponent &&
-                          (component as IfElseComponent).conditionExpression.isNotEmpty)
-                        Text(
-                          'Condition: ${(component as IfElseComponent).conditionExpression}',
-                          style: TextStyle(
-                            color: theme.onBackground.withValues(alpha: 0.6),
-                            fontSize: 12,
-                          ),
-                        ),
-                      if (component is SwitchCaseComponent)
-                        Text(
-                          (component as SwitchCaseComponent).switchVariable,
-                          style: TextStyle(
-                            color: theme.onBackground.withValues(alpha: 0.6),
-                            fontSize: 12,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                // Expand/Collapse icon
-                Icon(
-                  isExpanded ? Icons.expand_less : Icons.expand_more,
-                  color: theme.onBackground.withValues(alpha: 0.6),
-                ),
-                const SizedBox(width: 8),
-                // Delete button
-                IconButton(
-                  icon: Icon(
-                    Icons.delete_outline,
-                    color: theme.error.withValues(alpha: 0.7),
-                  ),
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    _showDeleteConfirmation(context);
-                  },
-                ),
-              ],
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            // Drag handle indicator
+            Tooltip(
+              message: 'Long press anywhere on this component to drag',
+              child: Icon(
+                Icons.drag_handle,
+                color: theme.onBackground.withValues(alpha: 0.4),
+                size: 20,
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
+            Icon(
+              _getComponentIcon(component.type),
+              color: _getComponentColor(component.type),
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _getComponentTitle(component),
+                    style: TextStyle(
+                      color: theme.onBackground,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (component is IfElseComponent &&
+                      (component as IfElseComponent).conditionExpression.isNotEmpty)
+                    Text(
+                      'Condition: ${(component as IfElseComponent).conditionExpression}',
+                      style: TextStyle(
+                        color: theme.onBackground.withValues(alpha: 0.6),
+                        fontSize: 12,
+                      ),
+                    ),
+                  if (component is SwitchCaseComponent)
+                    Text(
+                      (component as SwitchCaseComponent).switchVariable,
+                      style: TextStyle(
+                        color: theme.onBackground.withValues(alpha: 0.6),
+                        fontSize: 12,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            // Expand/Collapse icon
+            Icon(
+              isExpanded ? Icons.expand_less : Icons.expand_more,
+              color: theme.onBackground.withValues(alpha: 0.6),
+            ),
+            const SizedBox(width: 8),
+            // Delete button
+            IconButton(
+              icon: Icon(
+                Icons.delete_outline,
+                color: theme.error.withValues(alpha: 0.7),
+              ),
+              onPressed: () {
+                HapticFeedback.mediumImpact();
+                _showDeleteConfirmation(context);
+              },
+            ),
+          ],
         ),
       ),
     );
