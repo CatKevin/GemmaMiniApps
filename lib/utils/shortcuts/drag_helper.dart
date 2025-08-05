@@ -182,7 +182,7 @@ class DragHelper {
         case CompositeComponentType.ifElse:
           return 'IF-ELSE Structure';
         case CompositeComponentType.switchCase:
-          return 'SWITCH-CASE Structure';
+          return 'Menu Logic';
         default:
           return 'Composite Component';
       }

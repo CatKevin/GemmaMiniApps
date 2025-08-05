@@ -51,7 +51,16 @@ class EditorPage extends HookWidget {
     }
     
     final component = workflowComponents[workflowIndex];
-    return allComponents.indexWhere((c) => c.id == component.id);
+    final componentIndex = allComponents.indexWhere((c) => c.id == component.id);
+    
+    // Add error handling for edge cases
+    if (componentIndex == -1) {
+      print('WARNING: Component ${component.id} not found in allComponents');
+      // Return a safe default - the intended position in workflow
+      return workflowIndex;
+    }
+    
+    return componentIndex;
   }
 
   @override
@@ -552,6 +561,10 @@ class EditorPage extends HookWidget {
                                             session.components
                                           );
                                           
+                                          if (actualSourceIndex == actualTargetIndex) {
+                                            // Same position, no need to reorder
+                                            return;
+                                          }
                                           if (actualSourceIndex > actualTargetIndex) {
                                             // Moving up
                                             controller.reorderComponents(actualSourceIndex, actualTargetIndex);

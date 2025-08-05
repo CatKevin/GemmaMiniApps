@@ -736,8 +736,8 @@ class EditorController extends GetxController {
     final finalPromptIndex = components.indexWhere(
       (c) => c.component.type == ComponentType.finalPromptBuilder
     );
-    if (finalPromptIndex != -1 && newIndex >= finalPromptIndex) {
-      newIndex = finalPromptIndex - 1;
+    if (finalPromptIndex != -1 && newIndex > finalPromptIndex) {
+      newIndex = finalPromptIndex;
     }
     
     if (oldIndex < newIndex) {
