@@ -161,13 +161,76 @@ class CompositeComponentWidget extends HookWidget {
   }
 
   List<Widget> _buildSections(BuildContext context, dynamic theme) {
-    final sections = component.sections.map((section) {
-      return _buildSection(context, section, theme);
-    }).toList();
-
-    // Removed Add ELSE IF button from here - now in header
+    final sections = <Widget>[];
+    
+    // Add each section with proper separation
+    for (int i = 0; i < component.sections.length; i++) {
+      final section = component.sections[i];
+      
+      // Add separator between condition section and case options for Menu Logic
+      if (component.type == CompositeComponentType.switchCase &&
+          i == 1 && // After the first section (condition)
+          section.type == CompositeSectionType.caseOption) {
+        sections.add(_buildSeparator(theme));
+      }
+      
+      sections.add(_buildSection(context, section, theme));
+    }
 
     return sections;
+  }
+  
+  Widget _buildSeparator(dynamic theme) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 1,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Colors.orange.withValues(alpha: 0.0),
+                    Colors.orange.withValues(alpha: 0.3),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'SELECT OPTIONS',
+              style: TextStyle(
+                color: Colors.orange.withValues(alpha: 0.8),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Container(
+              height: 1,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Colors.orange.withValues(alpha: 0.3),
+                    Colors.orange.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildSection(BuildContext context, ComponentSection section, dynamic theme) {
@@ -213,6 +276,9 @@ class CompositeComponentWidget extends HookWidget {
         children: [
           // Main condition row
           Container(
+            padding: component.type == CompositeComponentType.switchCase 
+                ? const EdgeInsets.symmetric(horizontal: 16, vertical: 12)
+                : null,
             child: component.type == CompositeComponentType.ifElse
                 ? Container(
                     decoration: BoxDecoration(
@@ -274,78 +340,83 @@ class CompositeComponentWidget extends HookWidget {
                       ],
                     ),
                   )
-                : Row(
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.help_outline,
-                        color: _getComponentColor(component.type),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        section.label,
-                        style: TextStyle(
-                          color: _getComponentColor(component.type),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: TextField(
-                          controller: conditionController,
-                          style: TextStyle(color: theme.onBackground),
-                          decoration: InputDecoration(
-                            hintText: 'Enter menu prompt text',
-                            hintStyle: TextStyle(
-                              color: theme.onBackground.withValues(alpha: 0.4),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                color: theme.onBackground.withValues(alpha: 0.2),
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                color: theme.onBackground.withValues(alpha: 0.2),
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                color: _getComponentColor(component.type),
-                                width: 2,
-                              ),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.help_outline,
+                            color: _getComponentColor(component.type),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            section.label,
+                            style: TextStyle(
+                              color: _getComponentColor(component.type),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
                             ),
                           ),
-                          onChanged: (value) {
-                            section.properties['expression'] = value;
-                            if (component is SwitchCaseComponent) {
-                              (component as SwitchCaseComponent).switchVariable = value;
-                            }
-                          },
-                        ),
+                          const Spacer(),
+                          // Options management button for SWITCH-CASE
+                          if (component.type == CompositeComponentType.switchCase) ...[
+                            IconButton(
+                              icon: Icon(
+                                showOptionsEditor.value ? Icons.expand_less : Icons.settings,
+                                color: theme.primary,
+                              ),
+                              onPressed: () {
+                                showOptionsEditor.value = !showOptionsEditor.value;
+                              },
+                              tooltip: 'Manage options',
+                            ),
+                          ],
+                        ],
                       ),
-                      // Options management button for SWITCH-CASE
-                      if (component.type == CompositeComponentType.switchCase) ...[
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: Icon(
-                            showOptionsEditor.value ? Icons.expand_less : Icons.settings,
-                            color: theme.primary,
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: conditionController,
+                        style: TextStyle(color: theme.onBackground),
+                        maxLines: 3,
+                        minLines: 3,
+                        decoration: InputDecoration(
+                          hintText: 'Please enter the menu prompt\nYou can use multiple lines to describe the menu',
+                          hintStyle: TextStyle(
+                            color: theme.onBackground.withValues(alpha: 0.4),
                           ),
-                          onPressed: () {
-                            showOptionsEditor.value = !showOptionsEditor.value;
-                          },
-                          tooltip: 'Manage options',
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: theme.onBackground.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: theme.onBackground.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: _getComponentColor(component.type),
+                              width: 2,
+                            ),
+                          ),
                         ),
-                      ],
+                        onChanged: (value) {
+                          section.properties['expression'] = value;
+                          if (component is SwitchCaseComponent) {
+                            (component as SwitchCaseComponent).switchVariable = value;
+                          }
+                        },
+                      ),
                     ],
                   ),
           ),
@@ -361,145 +432,177 @@ class CompositeComponentWidget extends HookWidget {
     final newOptionController = useTextEditingController();
     
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: theme.surface,
-        border: Border(
-          top: BorderSide(
-            color: theme.onBackground.withValues(alpha: 0.1),
-          ),
+        color: theme.background,
+        border: Border.all(
+          color: theme.onBackground.withValues(alpha: 0.1),
+          width: 1,
         ),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                Icons.list,
-                color: theme.primary,
-                size: 20,
+          // Header section with primary color background
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: theme.surface,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(11),
+                topRight: Radius.circular(11),
               ),
-              const SizedBox(width: 8),
-              Text(
-                'Menu Options',
-                style: TextStyle(
-                  color: theme.onBackground,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '${switchComponent.caseOptions.length} options',
-                style: TextStyle(
-                  color: theme.onBackground.withValues(alpha: 0.6),
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Existing options
-          ...switchComponent.caseOptions.map((option) {
-            
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: theme.background,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
+              border: Border(
+                bottom: BorderSide(
                   color: theme.onBackground.withValues(alpha: 0.1),
+                  width: 1,
                 ),
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.drag_handle,
-                    color: theme.onBackground.withValues(alpha: 0.4),
-                    size: 20,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.list,
+                  color: theme.onBackground.withValues(alpha: 0.7),
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Menu Options',
+                  style: TextStyle(
+                    color: theme.onBackground,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      option,
-                      style: TextStyle(
-                        color: theme.onBackground,
-                        fontSize: 14,
-                      ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: theme.onBackground.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${switchComponent.caseOptions.length} options',
+                    style: TextStyle(
+                      color: theme.onBackground.withValues(alpha: 0.7),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  // Delete button (keep at least 2 options)
-                  if (switchComponent.caseOptions.length > 2)
+                ),
+              ],
+            ),
+          ),
+          // Options content with padding
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                // Existing options
+                ...switchComponent.caseOptions.map((option) {
+                  
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: theme.background,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: theme.onBackground.withValues(alpha: 0.1),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.drag_handle,
+                          color: theme.onBackground.withValues(alpha: 0.4),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            option,
+                            style: TextStyle(
+                              color: theme.onBackground,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        // Delete button (keep at least 2 options)
+                        if (switchComponent.caseOptions.length > 2)
+                          IconButton(
+                            icon: Icon(
+                              Icons.delete_outline,
+                              color: theme.error,
+                              size: 18,
+                            ),
+                            onPressed: () {
+                              switchComponent.removeCase(option);
+                              // Trigger UI update without changing expansion state
+                              onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
+                            },
+                          ),
+                      ],
+                    ),
+                  );
+                }),
+                const SizedBox(height: 8),
+                // Add new option
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: newOptionController,
+                        style: TextStyle(color: theme.onBackground),
+                        decoration: InputDecoration(
+                          hintText: 'New option name',
+                          hintStyle: TextStyle(
+                            color: theme.onBackground.withValues(alpha: 0.4),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: theme.onBackground.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          isDense: true,
+                        ),
+                        onSubmitted: (value) {
+                          if (value.isNotEmpty && !switchComponent.caseOptions.contains(value)) {
+                            switchComponent.addCase(value);
+                            newOptionController.clear();
+                            // Trigger UI update without changing expansion state
+                            onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     IconButton(
                       icon: Icon(
-                        Icons.delete_outline,
-                        color: theme.error,
-                        size: 18,
+                        Icons.add_circle,
+                        color: theme.primary,
                       ),
                       onPressed: () {
-                        switchComponent.removeCase(option);
-                        // Trigger UI update without changing expansion state
-                        onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
+                        final value = newOptionController.text;
+                        if (value.isNotEmpty && !switchComponent.caseOptions.contains(value)) {
+                          switchComponent.addCase(value);
+                          newOptionController.clear();
+                          // Trigger UI update without changing expansion state
+                          onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
+                        }
                       },
                     ),
-                ],
-              ),
-            );
-          }),
-          const SizedBox(height: 8),
-          // Add new option
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: newOptionController,
-                  style: TextStyle(color: theme.onBackground),
-                  decoration: InputDecoration(
-                    hintText: 'New option name',
-                    hintStyle: TextStyle(
-                      color: theme.onBackground.withValues(alpha: 0.4),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: theme.onBackground.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    isDense: true,
-                  ),
-                  onSubmitted: (value) {
-                    if (value.isNotEmpty && !switchComponent.caseOptions.contains(value)) {
-                      switchComponent.addCase(value);
-                      newOptionController.clear();
-                      // Trigger UI update without changing expansion state
-                      onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
-                    }
-                  },
+                  ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: Icon(
-                  Icons.add_circle,
-                  color: theme.primary,
-                ),
-                onPressed: () {
-                  final value = newOptionController.text;
-                  if (value.isNotEmpty && !switchComponent.caseOptions.contains(value)) {
-                    switchComponent.addCase(value);
-                    newOptionController.clear();
-                    // Trigger UI update without changing expansion state
-                    onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
-                  }
-                },
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
