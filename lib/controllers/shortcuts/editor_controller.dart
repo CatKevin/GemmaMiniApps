@@ -72,26 +72,37 @@ class EditorController extends GetxController {
   
   /// Ensure there's a FinalPromptBuilder at the end of components
   void _ensureFinalPromptBuilder(List<EditableComponent> components) {
-    // Remove any existing FinalPromptBuilder components
-    components.removeWhere((c) => c.component.type == ComponentType.finalPromptBuilder);
-    
-    // Add FinalPromptBuilder at the end
-    final finalPromptBuilder = UIComponent(
-      id: 'final_prompt_builder_${DateTime.now().millisecondsSinceEpoch}',
-      type: ComponentType.finalPromptBuilder,
-      properties: {
-        'promptTemplate': 'Enter your prompt here. Use {{variableName}} to insert variables.',
-        'enablePreview': true,
-        'previewVariables': <String, dynamic>{},
-      },
+    // Check if FinalPromptBuilder already exists
+    final existingFinalPromptIndex = components.indexWhere(
+      (c) => c.component.type == ComponentType.finalPromptBuilder
     );
     
-    components.add(EditableComponent(
-      id: finalPromptBuilder.id,
-      component: finalPromptBuilder,
-      order: components.length,
-      isExpanded: true, // Always expanded by default
-    ));
+    if (existingFinalPromptIndex != -1) {
+      // FinalPromptBuilder exists, ensure it's at the end
+      if (existingFinalPromptIndex != components.length - 1) {
+        // Move it to the end
+        final finalPromptBuilder = components.removeAt(existingFinalPromptIndex);
+        components.add(finalPromptBuilder);
+      }
+    } else {
+      // No FinalPromptBuilder exists, create a new one
+      final finalPromptBuilder = UIComponent(
+        id: 'final_prompt_builder_${DateTime.now().millisecondsSinceEpoch}',
+        type: ComponentType.finalPromptBuilder,
+        properties: {
+          'promptTemplate': 'Enter your prompt here. Use {{variableName}} to insert variables.',
+          'enablePreview': true,
+          'previewVariables': <String, dynamic>{},
+        },
+      );
+      
+      components.add(EditableComponent(
+        id: finalPromptBuilder.id,
+        component: finalPromptBuilder,
+        order: components.length,
+        isExpanded: true, // Always expanded by default
+      ));
+    }
     
     // Update order for all components
     for (int i = 0; i < components.length; i++) {
