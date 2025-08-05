@@ -257,89 +257,51 @@ class _OptimizedSwitchCaseRenderer extends HookWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Title section
-        AdvancedUITheme.glassmorphicContainer(
-            padding: const EdgeInsets.all(20),
-            margin: const EdgeInsets.only(bottom: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.menu_open, color: theme.primary, size: 28),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Choose Your Option',
-                        style: TextStyle(
-                          color: theme.onBackground,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Select one option to continue',
-                  style: TextStyle(
-                    color: theme.onBackground.withValues(alpha: 0.7),
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Options grid
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: options.length <= 2 ? 1 : 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: options.length <= 2 ? 3.5 : 1.5,
-            ),
-            itemCount: options.length,
-            itemBuilder: (context, index) {
+        // Options list (vertical layout)
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: options.length,
+          itemBuilder: (context, index) {
               final option = options[index];
               final isSelected = selectedOption.value == option;
               
-              return AnimatedBuilder(
-                animation: animationController,
-                builder: (context, child) {
-                  final delay = (index * 0.1).clamp(0.0, 0.5);
-                  final animation = Tween<double>(
-                    begin: 0.0,
-                    end: 1.0,
-                  ).animate(CurvedAnimation(
-                    parent: animationController,
-                    curve: Interval(
-                      delay,
-                      (delay + 0.5).clamp(0.0, 1.0),
-                      curve: Curves.easeOutBack,
-                    ),
-                  ));
-                  
-                  return Transform.scale(
-                    scale: 0.8 + (0.2 * animation.value),
-                    child: SafeOpacity(
-                      opacity: animation.value,
-                      child: child,
-                    ),
-                  );
-                },
-                child: _OptionCard(
-                  option: option,
-                  isSelected: isSelected,
-                  onTap: () {
-                    selectedOption.value = option;
-                    onValueChanged(switchVar, option);
-                    HapticFeedback.lightImpact();
+              return Padding(
+                padding: EdgeInsets.only(bottom: index < options.length - 1 ? 12 : 0),
+                child: AnimatedBuilder(
+                  animation: animationController,
+                  builder: (context, child) {
+                    final delay = (index * 0.08).clamp(0.0, 0.4);
+                    final animation = Tween<double>(
+                      begin: 0.0,
+                      end: 1.0,
+                    ).animate(CurvedAnimation(
+                      parent: animationController,
+                      curve: Interval(
+                        delay,
+                        (delay + 0.4).clamp(0.0, 1.0),
+                        curve: Curves.easeOutBack,
+                      ),
+                    ));
+                    
+                    return Transform.translate(
+                      offset: Offset(0, 20 * (1 - animation.value)),
+                      child: SafeOpacity(
+                        opacity: animation.value,
+                        child: child,
+                      ),
+                    );
                   },
-                  theme: theme,
+                  child: _OptionCard(
+                    option: option,
+                    isSelected: isSelected,
+                    onTap: () {
+                      selectedOption.value = option;
+                      onValueChanged(switchVar, option);
+                      HapticFeedback.lightImpact();
+                    },
+                    theme: theme,
+                  ),
                 ),
               );
             },
@@ -367,13 +329,13 @@ class _OptionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(20),
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
           decoration: BoxDecoration(
             gradient: isSelected
                 ? LinearGradient(
@@ -381,51 +343,70 @@ class _OptionCard extends StatelessWidget {
                     end: Alignment.bottomRight,
                     colors: [
                       theme.primary,
-                      theme.primary.withValues(alpha: 0.8),
+                      theme.primary.withValues(alpha: 0.85),
                     ],
                   )
                 : null,
-            color: isSelected ? null : theme.surface,
-            borderRadius: BorderRadius.circular(20),
+            color: isSelected ? null : theme.surface.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected
                   ? theme.primary
-                  : theme.onSurface.withValues(alpha: 0.2),
-              width: 2,
+                  : theme.onSurface.withValues(alpha: 0.1),
+              width: isSelected ? 2 : 1,
             ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: theme.primary.withValues(alpha: 0.3),
+                      color: theme.primary.withValues(alpha: 0.4),
                       blurRadius: 16,
                       offset: const Offset(0, 8),
                     ),
                   ]
                 : null,
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Row(
             children: [
-              AnimatedSwitcher(
+              AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                child: Icon(
-                  isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-                  color: isSelected
-                      ? theme.onPrimary
-                      : theme.onSurface.withValues(alpha: 0.5),
-                  size: 32,
-                  key: ValueKey(isSelected),
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected ? theme.onPrimary : Colors.transparent,
+                  border: Border.all(
+                    color: isSelected
+                        ? theme.onPrimary
+                        : theme.onSurface.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                child: isSelected
+                    ? Icon(
+                        Icons.check,
+                        size: 14,
+                        color: theme.primary,
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  option,
+                  style: TextStyle(
+                    color: isSelected ? theme.onPrimary : theme.onSurface,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    fontSize: 16,
+                    height: 1.3,
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                option,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: isSelected ? theme.onPrimary : theme.onSurface,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 16,
-                ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: isSelected
+                    ? theme.onPrimary
+                    : theme.onSurface.withValues(alpha: 0.3),
               ),
             ],
           ),

@@ -227,22 +227,32 @@ class _TextInputComponent extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use memoized to create controller only once
+    // Create unique controller for each component instance
     final initialValue = useMemoized(
       () => this.context.getVariable(component.variableBinding ?? '')?.toString() ?? '',
-      [component.id], // Only recreate if component ID changes
+      [component.id, component.variableBinding], // Recreate if component ID or binding changes
     );
     
     final controller = useTextEditingController(text: initialValue);
+    final hasFocus = useState(false);
     
-    // Update controller text only if variable changes externally
+    // Only update controller if this specific component's variable binding exists
+    // and the value has actually changed from an external source
     useEffect(() {
-      final currentValue = this.context.getVariable(component.variableBinding ?? '')?.toString() ?? '';
-      if (controller.text != currentValue && currentValue != initialValue) {
+      // Skip if no variable binding or if user is typing
+      if (component.variableBinding == null || 
+          component.variableBinding!.isEmpty || 
+          hasFocus.value) {
+        return null;
+      }
+      
+      final currentValue = this.context.getVariable(component.variableBinding!)?.toString() ?? '';
+      // Only update if value changed and it's different from what user typed
+      if (currentValue != controller.text && currentValue != initialValue) {
         controller.text = currentValue;
       }
       return null;
-    }, [this.context.getVariable(component.variableBinding ?? '')]);
+    }, [component.variableBinding, this.context.getVariable(component.variableBinding ?? ''), hasFocus.value]);
 
     final label = component.properties['label'] ?? 'Input';
     final placeholder = component.properties['placeholder'] ?? '';
@@ -261,36 +271,41 @@ class _TextInputComponent extends HookWidget {
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          maxLength: maxLength,
-          onChanged: (value) {
-            if (component.variableBinding != null) {
-              onValueChanged(component.variableBinding!, value);
-            }
+        Focus(
+          onFocusChange: (focused) {
+            hasFocus.value = focused;
           },
-          style: TextStyle(color: theme.inputText),
-          decoration: InputDecoration(
-            hintText: placeholder,
-            hintStyle: TextStyle(
-              color: theme.inputHint.withValues(alpha: theme.hintOpacity),
-            ),
-            filled: true,
-            fillColor: theme.inputBackground,
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: theme.inputBorder.withValues(alpha: theme.borderOpacity),
+          child: TextField(
+            controller: controller,
+            maxLength: maxLength,
+            onChanged: (value) {
+              if (component.variableBinding != null) {
+                onValueChanged(component.variableBinding!, value);
+              }
+            },
+            style: TextStyle(color: theme.inputText),
+            decoration: InputDecoration(
+              hintText: placeholder,
+              hintStyle: TextStyle(
+                color: theme.inputHint.withValues(alpha: theme.hintOpacity),
               ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: theme.inputBorderFocused
-                    .withValues(alpha: theme.borderOpacityFocused),
+              filled: true,
+              fillColor: theme.inputBackground,
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: theme.inputBorder.withValues(alpha: theme.borderOpacity),
+                ),
               ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: theme.inputBorderFocused
+                      .withValues(alpha: theme.borderOpacityFocused),
+                ),
+              ),
+              counterText: '',
             ),
-            counterText: '',
           ),
         ),
         if (component.validation?.errorMessage != null)
@@ -325,22 +340,32 @@ class _MultilineTextInputComponent extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use memoized to create controller only once
+    // Create unique controller for each component instance
     final initialValue = useMemoized(
       () => this.context.getVariable(component.variableBinding ?? '')?.toString() ?? '',
-      [component.id], // Only recreate if component ID changes
+      [component.id, component.variableBinding], // Recreate if component ID or binding changes
     );
     
     final controller = useTextEditingController(text: initialValue);
+    final hasFocus = useState(false);
     
-    // Update controller text only if variable changes externally
+    // Only update controller if this specific component's variable binding exists
+    // and the value has actually changed from an external source
     useEffect(() {
-      final currentValue = this.context.getVariable(component.variableBinding ?? '')?.toString() ?? '';
-      if (controller.text != currentValue && currentValue != initialValue) {
+      // Skip if no variable binding or if user is typing
+      if (component.variableBinding == null || 
+          component.variableBinding!.isEmpty || 
+          hasFocus.value) {
+        return null;
+      }
+      
+      final currentValue = this.context.getVariable(component.variableBinding!)?.toString() ?? '';
+      // Only update if value changed and it's different from what user typed
+      if (currentValue != controller.text && currentValue != initialValue) {
         controller.text = currentValue;
       }
       return null;
-    }, [this.context.getVariable(component.variableBinding ?? '')]);
+    }, [component.variableBinding, this.context.getVariable(component.variableBinding ?? ''), hasFocus.value]);
 
     final label = component.properties['label'] ?? 'Input';
     final placeholder = component.properties['placeholder'] ?? '';
@@ -360,37 +385,42 @@ class _MultilineTextInputComponent extends HookWidget {
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          maxLines: rows as int,
-          maxLength: maxLength,
-          onChanged: (value) {
-            if (component.variableBinding != null) {
-              onValueChanged(component.variableBinding!, value);
-            }
+        Focus(
+          onFocusChange: (focused) {
+            hasFocus.value = focused;
           },
-          style: TextStyle(color: theme.inputText),
-          decoration: InputDecoration(
-            hintText: placeholder,
-            hintStyle: TextStyle(
-              color: theme.inputHint.withValues(alpha: theme.hintOpacity),
-            ),
-            filled: true,
-            fillColor: theme.inputBackground,
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: theme.inputBorder.withValues(alpha: theme.borderOpacity),
+          child: TextField(
+            controller: controller,
+            maxLines: rows as int,
+            maxLength: maxLength,
+            onChanged: (value) {
+              if (component.variableBinding != null) {
+                onValueChanged(component.variableBinding!, value);
+              }
+            },
+            style: TextStyle(color: theme.inputText),
+            decoration: InputDecoration(
+              hintText: placeholder,
+              hintStyle: TextStyle(
+                color: theme.inputHint.withValues(alpha: theme.hintOpacity),
               ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: theme.inputBorderFocused
-                    .withValues(alpha: theme.borderOpacityFocused),
+              filled: true,
+              fillColor: theme.inputBackground,
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: theme.inputBorder.withValues(alpha: theme.borderOpacity),
+                ),
               ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: theme.inputBorderFocused
+                      .withValues(alpha: theme.borderOpacityFocused),
+                ),
+              ),
+              counterText: '',
             ),
-            counterText: '',
           ),
         ),
       ],

@@ -76,27 +76,27 @@ class AdvancedUITheme {
       case 2:
         return [
           BoxShadow(
-            color: (isDark ? Colors.black : Colors.black).withValues(alpha: 0.1),
-            blurRadius: 8,
+            color: (isDark ? Colors.black : Colors.black).withValues(alpha: 0.08),
+            blurRadius: 10,
             offset: const Offset(0, 4),
           ),
           BoxShadow(
-            color: (isDark ? Colors.black : Colors.black).withValues(alpha: 0.05),
-            blurRadius: 16,
+            color: (isDark ? Colors.black : Colors.black).withValues(alpha: 0.04),
+            blurRadius: 20,
             offset: const Offset(0, 8),
           ),
         ];
       case 3:
         return [
           BoxShadow(
-            color: (isDark ? Colors.black : Colors.black).withValues(alpha: 0.15),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+            color: (isDark ? Colors.black : Colors.black).withValues(alpha: 0.12),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
           BoxShadow(
-            color: (isDark ? Colors.black : Colors.black).withValues(alpha: 0.08),
-            blurRadius: 32,
-            offset: const Offset(0, 16),
+            color: (isDark ? Colors.black : Colors.black).withValues(alpha: 0.06),
+            blurRadius: 40,
+            offset: const Offset(0, 20),
           ),
         ];
       case 4:
