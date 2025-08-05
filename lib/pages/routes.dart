@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'chat/chat_page.dart';
 import 'shortcuts/shortcuts_page.dart';
-import 'shortcuts/runtime_page.dart';
+import 'shortcuts/enhanced_runtime_page.dart';
 import 'shortcuts/editor_page.dart';
 import 'shortcuts/basic_info_page.dart';
 
@@ -109,7 +109,7 @@ class AppPages {
     ),
     GetPage(
       name: Routes.shortcutsRuntime,
-      page: () => const RuntimePage(),
+      page: () => const EnhancedRuntimePage(), // Using enhanced version for better UX
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 200),
     ),
