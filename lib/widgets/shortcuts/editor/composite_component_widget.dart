@@ -938,6 +938,7 @@ class CompositeComponentWidget extends HookWidget {
                         ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
+                          padding: EdgeInsets.zero,
                           itemCount: section.children.length,
                           itemBuilder: (context, index) {
                             final child = section.children[index];
@@ -1006,19 +1007,21 @@ class CompositeComponentWidget extends HookWidget {
                             }
                           },
                           showDropIndicator: true,
-                          child: Center(
-                            child: TextButton.icon(
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                            child: OutlinedButton.icon(
                               onPressed: () => _showAddComponentDialog(section),
-                              icon: Icon(Icons.add_circle_outline, size: 20),
+                              icon: const Icon(Icons.add, size: 20),
                               label: const Text('Add Component'),
-                              style: TextButton.styleFrom(
+                              style: OutlinedButton.styleFrom(
                                 foregroundColor: theme.primary,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                side: BorderSide(color: theme.primary),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 12,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
-                                  side: BorderSide(
-                                    color: theme.primary.withValues(alpha: 0.3),
-                                  ),
                                 ),
                               ),
                             ),
@@ -1123,35 +1126,22 @@ class CompositeComponentWidget extends HookWidget {
   }
 
   Widget _buildEmptyPlaceholder(ComponentSection section, dynamic theme) {
-    return GestureDetector(
-      onTap: () => _showAddComponentDialog(section),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: theme.onBackground.withValues(alpha: 0.1),
-            style: BorderStyle.solid,
-            width: 1,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      child: OutlinedButton.icon(
+        onPressed: () => _showAddComponentDialog(section),
+        icon: const Icon(Icons.add, size: 20),
+        label: const Text('Add Component'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: theme.primary,
+          side: BorderSide(color: theme.primary),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 12,
           ),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.add_circle_outline,
-              color: theme.onBackground.withValues(alpha: 0.3),
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Add',
-              style: TextStyle(
-                color: theme.onBackground.withValues(alpha: 0.3),
-                fontSize: 12,
-              ),
-            ),
-          ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
         ),
       ),
     );
@@ -1345,7 +1335,7 @@ class _DraggableChildWidget extends HookWidget {
       child: Container(
         margin: index < section.children.length - 1 
             ? const EdgeInsets.only(bottom: 8)
-            : EdgeInsets.zero,
+            : const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
           color: theme.surface,
           border: Border.all(
