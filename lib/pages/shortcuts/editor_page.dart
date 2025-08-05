@@ -418,7 +418,7 @@ class EditorPage extends HookWidget {
                   // Scrollable area containing everything
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.only(bottom: 120), // Space for FAB
+                      padding: const EdgeInsets.only(bottom: 150), // Extra space for FAB and drop zone
                       child: Column(
                         children: [
                           // Variable definition section (always first)
@@ -476,7 +476,7 @@ class EditorPage extends HookWidget {
                                       return ComponentDropTarget(
                                         targetIndex: index,
                                         targetSectionId: null,
-                                        showDropIndicator: false,
+                                        showDropIndicator: true, // Use the same indicator as other positions
                                         onAccept: (dragData, targetIndex) {
                                           // Get actual index in full components list
                                           final actualTargetIndex = _getActualIndex(
@@ -505,28 +505,27 @@ class EditorPage extends HookWidget {
                                           }
                                         },
                                         child: Container(
-                                          height: 80,
+                                          height: 60, // Larger drop zone for better user experience
                                           margin: const EdgeInsets.symmetric(horizontal: 16),
                                           child: Center(
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 24,
-                                                vertical: 12,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                border: Border.all(
-                                                  color: theme.onBackground.withValues(alpha: 0.1),
-                                                  style: BorderStyle.solid,
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  Icons.touch_app,
+                                                  size: 14,
+                                                  color: theme.onBackground.withValues(alpha: 0.25),
                                                 ),
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                'Drop components here',
-                                                style: TextStyle(
-                                                  color: theme.onBackground.withValues(alpha: 0.3),
-                                                  fontSize: 12,
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  'Long press components to reorder',
+                                                  style: TextStyle(
+                                                    color: theme.onBackground.withValues(alpha: 0.25),
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.normal,
+                                                  ),
                                                 ),
-                                              ),
+                                              ],
                                             ),
                                           ),
                                         ),
