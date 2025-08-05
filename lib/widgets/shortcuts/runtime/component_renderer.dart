@@ -188,7 +188,7 @@ class ComponentRenderer {
       case ComponentType.roleDefinition:
       case ComponentType.contextProvider:
       case ComponentType.taskDescription:
-      case ComponentType.textTemplate:
+      case ComponentType.text:
       case ComponentType.exampleProvider:
         return _PromptComponent(
           component: component,

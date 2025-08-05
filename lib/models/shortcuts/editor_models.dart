@@ -462,12 +462,12 @@ class ComponentTemplateLibrary {
     
     // Prompt Components
     ComponentTemplate(
-      id: 'text-template',
-      name: 'Text Template',
+      id: 'text',
+      name: 'Text',
       description: 'Rich text with variables',
       icon: Icons.text_snippet,
       category: ComponentCategory.prompt,
-      type: ComponentType.textTemplate,
+      type: ComponentType.text,
       defaultProperties: {
         'content': '',
       },

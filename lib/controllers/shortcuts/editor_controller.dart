@@ -1,6 +1,5 @@
 import 'package:get/get.dart';
 import '../../models/shortcuts/models.dart';
-import '../../models/shortcuts/composite_component.dart';
 import '../../services/shortcuts/storage_service.dart';
 
 class EditorController extends GetxController {
@@ -590,7 +589,7 @@ class EditorController extends GetxController {
           _registerVariable(value.toString(), component.component.type);
         }
       } else if (key == 'outputVariable' && 
-                 component.component.type == ComponentType.textTemplate) {
+                 component.component.type == ComponentType.text) {
         updatedUIComponent = component.component.copyWith(
           properties: updatedProperties,
         );
@@ -645,7 +644,7 @@ class EditorController extends GetxController {
                 _registerVariable(value.toString(), child.component.type);
               }
             } else if (key == 'outputVariable' && 
-                       child.component.type == ComponentType.textTemplate) {
+                       child.component.type == ComponentType.text) {
               updatedUIComponent = child.component.copyWith(
                 properties: updatedProperties,
               );
@@ -918,7 +917,7 @@ class EditorController extends GetxController {
               content: component.component.properties['task'] ?? '',
               order: i,
             ));
-          } else if (component.component.type == ComponentType.textTemplate) {
+          } else if (component.component.type == ComponentType.text) {
             promptSections.add(PromptSection(
               id: 'section_$i',
               type: PromptSectionType.custom,

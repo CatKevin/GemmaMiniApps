@@ -319,7 +319,7 @@ class DraggableComponentCard extends HookWidget {
         return Icons.check_box;
       case ComponentType.conditional:
         return Icons.alt_route;
-      case ComponentType.textTemplate:
+      case ComponentType.text:
         return Icons.text_snippet;
       case ComponentType.roleDefinition:
         return Icons.person;
@@ -331,8 +331,8 @@ class DraggableComponentCard extends HookWidget {
   }
 
   String _getComponentTitle(UIComponent component) {
-    // For text template, show content preview
-    if (component.type == ComponentType.textTemplate && 
+    // For text component, show content preview
+    if (component.type == ComponentType.text && 
         component.properties['content'] != null &&
         component.properties['content'].toString().isNotEmpty) {
       final content = component.properties['content'].toString();
@@ -347,7 +347,7 @@ class DraggableComponentCard extends HookWidget {
   }
 
   String _getComponentSubtitle(UIComponent component) {
-    // Check for output variable (for text template and other components)
+    // Check for output variable (for text and other components)
     if (component.properties['outputVariable'] != null && 
         component.properties['outputVariable'].toString().isNotEmpty) {
       return 'Output: ${component.properties['outputVariable']}';

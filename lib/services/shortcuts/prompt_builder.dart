@@ -207,7 +207,7 @@ class PromptBuilder {
           );
           break;
           
-        case ComponentType.textTemplate:
+        case ComponentType.text:
           section = PromptSection(
             id: component.id,
             type: PromptSectionType.custom,

@@ -10,6 +10,61 @@ import '../../services/shortcuts/storage_service.dart';
 
 class RuntimePage extends HookWidget {
   const RuntimePage({super.key});
+  
+  // Process Text components to extract their content into output variables
+  void _processTextVariables(ShortcutDefinition shortcut, ExecutionContext context) {
+    // Process all screens
+    for (final screen in shortcut.screens) {
+      for (final component in screen.components) {
+        _processComponent(component, context);
+      }
+    }
+  }
+  
+  // Recursively process components including those in composite components
+  void _processComponent(UIComponent component, ExecutionContext context) {
+    // Check if it's a Text component with output variable
+    if (component.type == ComponentType.text && 
+        component.properties['outputVariable'] != null &&
+        component.properties['outputVariable'].toString().isNotEmpty) {
+      final outputVar = component.properties['outputVariable'].toString();
+      final content = component.properties['content'] ?? '';
+      
+      // Process the content to replace variable references
+      final processedContent = _processTemplateContent(content, context);
+      
+      // Set the variable
+      context.setVariable(outputVar, processedContent);
+    }
+    
+    // Process composite components recursively
+    if (component.properties['isComposite'] == true && 
+        component.properties['sections'] != null) {
+      final sections = component.properties['sections'] as List;
+      for (final section in sections) {
+        if (section['children'] != null) {
+          final children = section['children'] as List;
+          for (final childJson in children) {
+            final childComponent = UIComponent.fromJson(childJson);
+            _processComponent(childComponent, context);
+          }
+        }
+      }
+    }
+  }
+  
+  // Process template content to replace variable references
+  String _processTemplateContent(String content, ExecutionContext context) {
+    // Replace {{variable}} patterns with actual values
+    return content.replaceAllMapped(
+      RegExp(r'\{\{(\w+)\}\}'),
+      (match) {
+        final variableName = match.group(1)!;
+        final value = context.getVariable(variableName);
+        return value?.toString() ?? '{{$variableName}}';
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +103,9 @@ class RuntimePage extends HookWidget {
             currentScreen.value = loadedShortcut.screens.firstWhere(
               (s) => s.id == loadedShortcut.startScreenId,
             );
+            
+            // Process Text components and set their output variables
+            _processTextVariables(loadedShortcut, executionContext.value!);
           }
           isLoadingShortcut.value = false;
         });

@@ -320,7 +320,7 @@ enum ComponentType {
   roleDefinition,
   contextProvider,
   taskDescription,
-  textTemplate,
+  text,
   exampleProvider,
   
   // Special component - always at the end of workflow
