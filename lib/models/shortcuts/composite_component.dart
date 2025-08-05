@@ -290,6 +290,38 @@ class SwitchCaseComponent extends CompositeComponent {
     sections.removeWhere((s) => s.id == '${id}_case_${option.hashCode}');
     caseOptions.remove(option);
   }
+  
+  /// Rename a CASE option without losing its child components
+  void renameCase(int index, String newName) {
+    if (index < 0 || index >= caseOptions.length) return;
+    if (newName.isEmpty || caseOptions.contains(newName)) return;
+    
+    final oldName = caseOptions[index];
+    
+    // Find the corresponding section
+    final sectionIndex = sections.indexWhere(
+      (s) => s.id == '${id}_case_${oldName.hashCode}'
+    );
+    
+    if (sectionIndex != -1) {
+      // Create a new section with updated properties, preserving children
+      final oldSection = sections[sectionIndex];
+      final newProperties = Map<String, dynamic>.from(oldSection.properties);
+      newProperties['value'] = newName;
+      
+      final newSection = oldSection.copyWith(
+        id: '${id}_case_${newName.hashCode}',
+        label: 'CASE "$newName"',
+        properties: newProperties,
+      );
+      
+      // Replace the old section with the new one
+      sections[sectionIndex] = newSection;
+      
+      // Update the caseOptions list
+      caseOptions[index] = newName;
+    }
+  }
 
   /// Update cases based on menu options
   void updateCases(List<String> newOptions) {

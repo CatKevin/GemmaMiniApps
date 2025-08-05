@@ -376,46 +376,74 @@ class CompositeComponentWidget extends HookWidget {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      TextField(
-                        controller: conditionController,
-                        style: TextStyle(color: theme.onBackground),
-                        maxLines: 3,
-                        minLines: 3,
-                        decoration: InputDecoration(
-                          hintText: 'Please enter the menu prompt\nYou can use multiple lines to describe the menu',
-                          hintStyle: TextStyle(
-                            color: theme.onBackground.withValues(alpha: 0.4),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              theme.surface,
+                              theme.background,
+                            ],
                           ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: theme.onBackground.withValues(alpha: 0.05),
+                            width: 1,
                           ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: theme.onBackground.withValues(alpha: 0.2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.orange.withValues(alpha: 0.2),
+                              width: 1,
                             ),
                           ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: theme.onBackground.withValues(alpha: 0.2),
+                          child: TextField(
+                            controller: conditionController,
+                            style: TextStyle(
+                              color: theme.onBackground,
+                              fontSize: 15,
+                              height: 1.5,
                             ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: _getComponentColor(component.type),
-                              width: 2,
+                            maxLines: 3,
+                            minLines: 3,
+                            decoration: InputDecoration(
+                              hintText: 'Enter your menu prompt here...\nDescribe what options the user will choose from\nBe clear and concise',
+                              hintStyle: TextStyle(
+                                color: theme.onBackground.withValues(alpha: 0.3),
+                                fontSize: 14,
+                              ),
+                              contentPadding: const EdgeInsets.all(16),
+                              border: InputBorder.none,
+                              prefixIcon: Padding(
+                                padding: const EdgeInsets.only(left: 16, right: 8),
+                                child: Icon(
+                                  Icons.edit_note,
+                                  color: Colors.orange.withValues(alpha: 0.6),
+                                  size: 24,
+                                ),
+                              ),
+                              prefixIconConstraints: const BoxConstraints(
+                                minWidth: 48,
+                              ),
                             ),
+                            onChanged: (value) {
+                              section.properties['expression'] = value;
+                              if (component is SwitchCaseComponent) {
+                                (component as SwitchCaseComponent).switchVariable = value;
+                              }
+                            },
                           ),
                         ),
-                        onChanged: (value) {
-                          section.properties['expression'] = value;
-                          if (component is SwitchCaseComponent) {
-                            (component as SwitchCaseComponent).switchVariable = value;
-                          }
-                        },
                       ),
                     ],
                   ),
@@ -430,6 +458,7 @@ class CompositeComponentWidget extends HookWidget {
 
   Widget _buildOptionsEditor(BuildContext context, SwitchCaseComponent switchComponent, dynamic theme) {
     final newOptionController = useTextEditingController();
+    final editingStates = useState<Map<int, bool>>({});
     
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -501,42 +530,116 @@ class CompositeComponentWidget extends HookWidget {
             child: Column(
               children: [
                 // Existing options
-                ...switchComponent.caseOptions.map((option) {
+                ...switchComponent.caseOptions.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final option = entry.value;
+                  final isEditing = editingStates.value[index] ?? false;
+                  final editController = useTextEditingController(text: option);
                   
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: theme.background,
+                      color: theme.surface,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: theme.onBackground.withValues(alpha: 0.1),
+                        color: isEditing 
+                            ? Colors.orange.withValues(alpha: 0.5)
+                            : theme.onBackground.withValues(alpha: 0.1),
+                        width: isEditing ? 2 : 1,
                       ),
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.drag_handle,
-                          color: theme.onBackground.withValues(alpha: 0.4),
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            option,
-                            style: TextStyle(
-                              color: theme.onBackground,
-                              fontSize: 14,
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${index + 1}',
+                              style: TextStyle(
+                                color: Colors.orange.withValues(alpha: 0.8),
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: isEditing
+                              ? TextField(
+                                  controller: editController,
+                                  autofocus: true,
+                                  style: TextStyle(
+                                    color: theme.onBackground,
+                                    fontSize: 14,
+                                  ),
+                                  decoration: InputDecoration(
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                                  ),
+                                  onSubmitted: (newValue) {
+                                    if (newValue.isNotEmpty && newValue != option && !switchComponent.caseOptions.contains(newValue)) {
+                                      // Use rename method to preserve child components
+                                      switchComponent.renameCase(index, newValue);
+                                      
+                                      // Trigger UI update
+                                      onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
+                                    }
+                                    editingStates.value = {...editingStates.value, index: false};
+                                  },
+                                  onTapOutside: (_) {
+                                    // Save changes when tapping outside
+                                    final newValue = editController.text;
+                                    if (newValue.isNotEmpty && newValue != option && !switchComponent.caseOptions.contains(newValue)) {
+                                      // Use rename method to preserve child components
+                                      switchComponent.renameCase(index, newValue);
+                                      onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
+                                    }
+                                    editingStates.value = {...editingStates.value, index: false};
+                                  },
+                                )
+                              : InkWell(
+                                  onTap: () {
+                                    editingStates.value = {...editingStates.value, index: true};
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    child: Text(
+                                      option,
+                                      style: TextStyle(
+                                        color: theme.onBackground,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                        ),
+                        // Edit button
+                        if (!isEditing)
+                          IconButton(
+                            icon: Icon(
+                              Icons.edit,
+                              color: theme.onBackground.withValues(alpha: 0.5),
+                              size: 16,
+                            ),
+                            onPressed: () {
+                              editingStates.value = {...editingStates.value, index: true};
+                            },
+                          ),
                         // Delete button (keep at least 2 options)
                         if (switchComponent.caseOptions.length > 2)
                           IconButton(
                             icon: Icon(
                               Icons.delete_outline,
                               color: theme.error,
-                              size: 18,
+                              size: 16,
                             ),
                             onPressed: () {
                               switchComponent.removeCase(option);
@@ -548,58 +651,99 @@ class CompositeComponentWidget extends HookWidget {
                     ),
                   );
                 }),
-                const SizedBox(height: 8),
-                // Add new option
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: newOptionController,
-                        style: TextStyle(color: theme.onBackground),
-                        decoration: InputDecoration(
-                          hintText: 'New option name',
-                          hintStyle: TextStyle(
-                            color: theme.onBackground.withValues(alpha: 0.4),
+                const SizedBox(height: 12),
+                // Add new option section
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.orange.withValues(alpha: 0.05),
+                        Colors.orange.withValues(alpha: 0.02),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Colors.orange.withValues(alpha: 0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: newOptionController,
+                          style: TextStyle(
+                            color: theme.onBackground,
+                            fontSize: 14,
                           ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: theme.onBackground.withValues(alpha: 0.2),
+                          decoration: InputDecoration(
+                            hintText: 'Type new option name and press Enter',
+                            hintStyle: TextStyle(
+                              color: theme.onBackground.withValues(alpha: 0.4),
+                              fontSize: 14,
+                            ),
+                            filled: true,
+                            fillColor: theme.surface,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Colors.orange.withValues(alpha: 0.4),
+                                width: 2,
+                              ),
                             ),
                           ),
-                          isDense: true,
+                          onSubmitted: (value) {
+                            if (value.isNotEmpty && !switchComponent.caseOptions.contains(value)) {
+                              switchComponent.addCase(value);
+                              newOptionController.clear();
+                              // Trigger UI update without changing expansion state
+                              onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
+                            }
+                          },
                         ),
-                        onSubmitted: (value) {
-                          if (value.isNotEmpty && !switchComponent.caseOptions.contains(value)) {
-                            switchComponent.addCase(value);
-                            newOptionController.clear();
-                            // Trigger UI update without changing expansion state
-                            onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
-                          }
-                        },
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: Icon(
-                        Icons.add_circle,
-                        color: theme.primary,
+                      const SizedBox(width: 8),
+                      Material(
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () {
+                            final value = newOptionController.text;
+                            if (value.isNotEmpty && !switchComponent.caseOptions.contains(value)) {
+                              switchComponent.addCase(value);
+                              newOptionController.clear();
+                              // Trigger UI update without changing expansion state
+                              onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            child: Icon(
+                              Icons.add_circle,
+                              color: Colors.orange.withValues(alpha: 0.8),
+                              size: 22,
+                            ),
+                          ),
+                        ),
                       ),
-                      onPressed: () {
-                        final value = newOptionController.text;
-                        if (value.isNotEmpty && !switchComponent.caseOptions.contains(value)) {
-                          switchComponent.addCase(value);
-                          newOptionController.clear();
-                          // Trigger UI update without changing expansion state
-                          onPropertyChanged(component.id, 'structure_updated', DateTime.now().millisecondsSinceEpoch);
-                        }
-                      },
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
