@@ -34,6 +34,7 @@ class EnhancedRuntimePage extends HookWidget {
     final isLoading = useState(false);
     final isLoadingShortcut = useState(false);
     final generatedPrompt = useState<String?>(null);
+    final menuLogicSelectionTrigger = useState(0); // Trigger UI update on selection
     
     // Controllers
     final pageController = usePageController();
@@ -43,9 +44,13 @@ class EnhancedRuntimePage extends HookWidget {
     
     // Initialize component variables helper
     void initializeComponentVariables(UIComponent component, ExecutionContext context) {
-      // Initialize variable if it has binding
-      if (component.variableBinding != null && 
-          !context.hasVariable(component.variableBinding!)) {
+      // Initialize variable if it has binding AND doesn't already exist
+      if (component.variableBinding != null) {
+        // Check if variable already exists - if so, don't overwrite it
+        if (context.hasVariable(component.variableBinding!)) {
+          return; // Variable already exists, skip initialization
+        }
+        
         dynamic defaultValue;
         switch (component.type) {
           case ComponentType.textInput:
@@ -180,6 +185,33 @@ class EnhancedRuntimePage extends HookWidget {
       return null;
     }, [shortcutId]);
     
+    // Check if Menu Logic has selection
+    bool isMenuLogicSelected() {
+      if (currentStepIndex.value >= steps.value.length) return false;
+      
+      final currentStep = steps.value[currentStepIndex.value];
+      if (currentStep.metadata?['compositeType'].toString() != 'CompositeComponentType.switchCase') return false;
+      
+      // Check if switch component has selected value
+      if (currentStep.components.isNotEmpty) {
+        final switchComponent = currentStep.components.first;
+        final compositeData = switchComponent.properties['compositeData'] as Map<String, dynamic>?;
+        
+        if (compositeData != null) {
+          // Try to get switchVariable from compositeData
+          final switchVar = compositeData['switchVariable'] ?? '';
+          
+          if (switchVar.isNotEmpty) {
+            final selectedOption = executionContext.value?.getVariable(switchVar)?.toString();
+            
+            return selectedOption != null && selectedOption.isNotEmpty;
+          }
+        }
+      }
+      
+      return false;
+    }
+    
     // Validate current step
     bool validateCurrentStep() {
       if (currentStepIndex.value >= steps.value.length) return true;
@@ -264,6 +296,54 @@ class EnhancedRuntimePage extends HookWidget {
     void navigateToNext() {
       if (!validateCurrentStep()) return;
       
+      // Check if current step is a switch-case that requires dynamic steps
+      final currentStep = steps.value[currentStepIndex.value];
+      
+      if (currentStep.metadata?['requiresDynamicSteps'] == true) {
+        // Get the switch component
+        final switchComponent = currentStep.components.first;
+        final compositeData = switchComponent.properties['compositeData'] as Map<String, dynamic>?;
+        
+        if (compositeData != null) {
+          final switchVar = compositeData['switchVariable'] ?? '';
+          final selectedOption = executionContext.value?.getVariable(switchVar)?.toString();
+          
+          
+          if (selectedOption != null && selectedOption.isNotEmpty) {
+            // Generate steps for the selected branch
+            final branchSteps = StepGenerator.generateSwitchCaseBranchSteps(
+              switchComponent,
+              selectedOption,
+            );
+            
+            
+            if (branchSteps.isNotEmpty) {
+              // Insert the branch steps after the current step
+              final newSteps = List<RenderStep>.from(steps.value);
+              
+              // Remove any previously inserted branch steps from the same switch
+              newSteps.removeWhere((step) => 
+                step.metadata?['fromSwitchCase'] == true &&
+                step.metadata?['parentComponentId'] == switchComponent.id
+              );
+              
+              // Insert new branch steps
+              newSteps.insertAll(currentStepIndex.value + 1, branchSteps);
+              steps.value = newSteps;
+              
+              
+              // Update page controller to handle new page count
+              // Force rebuild of PageView by jumping to current page
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (pageController.hasClients) {
+                  pageController.jumpToPage(currentStepIndex.value);
+                }
+              });
+            }
+          }
+        }
+      }
+      
       if (currentStepIndex.value < steps.value.length - 1) {
         HapticFeedback.lightImpact();
         currentStepIndex.value++;
@@ -281,6 +361,31 @@ class EnhancedRuntimePage extends HookWidget {
     void navigateToPrevious() {
       if (currentStepIndex.value > 0) {
         HapticFeedback.lightImpact();
+        
+        // Check if we're navigating back from a switch-case branch
+        final currentStep = steps.value[currentStepIndex.value];
+        if (currentStep.metadata?['fromSwitchCase'] == true) {
+          // Check if the previous step is the switch-case selection
+          final prevStep = steps.value[currentStepIndex.value - 1];
+          if (prevStep.metadata?['requiresDynamicSteps'] == true) {
+            // We're going back to the switch selection, remove all branch steps
+            final parentId = currentStep.metadata?['parentComponentId'];
+            final newSteps = List<RenderStep>.from(steps.value);
+            newSteps.removeWhere((step) => 
+              step.metadata?['fromSwitchCase'] == true &&
+              step.metadata?['parentComponentId'] == parentId
+            );
+            steps.value = newSteps;
+            
+            // Update page controller to handle removed pages
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (pageController.hasClients) {
+                pageController.jumpToPage(currentStepIndex.value - 1);
+              }
+            });
+          }
+        }
+        
         currentStepIndex.value--;
         pageController.previousPage(
           duration: const Duration(milliseconds: 400),
@@ -398,21 +503,35 @@ class EnhancedRuntimePage extends HookWidget {
                       step: steps.value[index],
                       context: executionContext.value!,
                       animationController: animationController,
+                      navigateToNext: navigateToNext,
+                      menuLogicSelectionTrigger: menuLogicSelectionTrigger,
                     ),
                   );
                 },
               ),
             ),
             
-            // Navigation
-            _buildNavigationBar(
-              currentStep: currentStepIndex.value,
-              totalSteps: steps.value.length,
-              onPrevious: navigateToPrevious,
-              onNext: navigateToNext,
-              isLoading: isLoading.value,
-              theme: theme,
-            ),
+            // Navigation - rebuild on menu logic selection
+            if (steps.value.isNotEmpty)
+              ValueListenableBuilder<int>(
+                valueListenable: menuLogicSelectionTrigger,
+                builder: (context, triggerValue, __) {
+                  final isMenuLogic = steps.value[currentStepIndex.value].metadata?['compositeType'].toString() == 'CompositeComponentType.switchCase';
+                  final hasSelection = isMenuLogicSelected();
+                  
+                  
+                  return _buildNavigationBar(
+                    currentStep: currentStepIndex.value,
+                    totalSteps: steps.value.length,
+                    onPrevious: navigateToPrevious,
+                    onNext: navigateToNext,
+                    isLoading: isLoading.value,
+                    theme: theme,
+                    isMenuLogicStep: isMenuLogic,
+                    hasMenuLogicSelection: hasSelection,
+                  );
+                },
+              ),
           ],
         ),
       ),
@@ -469,6 +588,8 @@ class EnhancedRuntimePage extends HookWidget {
     required RenderStep step,
     required ExecutionContext context,
     required animationController,
+    required VoidCallback navigateToNext,
+    required ValueNotifier<int> menuLogicSelectionTrigger,
   }) {
     final theme = ThemeController.to.currentThemeConfig;
     // Welcome step
@@ -480,6 +601,9 @@ class EnhancedRuntimePage extends HookWidget {
     if (step.type == StepType.confirmation) {
       return _buildConfirmationStep(context, theme);
     }
+    
+    // Check if this is a Menu Logic step
+    final isMenuLogicStep = step.metadata?['compositeType'].toString() == 'CompositeComponentType.switchCase';
     
     // Regular step
     return SingleChildScrollView(
@@ -515,16 +639,31 @@ class EnhancedRuntimePage extends HookWidget {
             final index = entry.key;
             final component = entry.value;
             
-            return TransitionEffects.staggeredAnimation(
-              index: index,
-              controller: animationController,
-              child: OptimizedComponentRenderer.render(
-                component,
-                context,
-                (variable, value) {
-                  context.setVariable(variable, value);
-                },
-                theme,
+            // Create unique key based on step ID, component ID, and index
+            final componentKey = ValueKey('${step.id}_${component.id}_${index}');
+            
+            return KeyedSubtree(
+              key: componentKey,
+              child: TransitionEffects.staggeredAnimation(
+                index: index,
+                controller: animationController,
+                child: OptimizedComponentRenderer.render(
+                  component,
+                  context,
+                  (variable, value) {
+                    context.setVariable(variable, value);
+                    // Trigger UI update for Menu Logic selection
+                    if (isMenuLogicStep) {
+                      menuLogicSelectionTrigger.value++;
+                      // Force a rebuild of the entire widget
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        // This will trigger a rebuild
+                        menuLogicSelectionTrigger.value++;
+                      });
+                    }
+                  },
+                  theme,
+                ),
               ),
             );
           }),
@@ -680,9 +819,15 @@ class EnhancedRuntimePage extends HookWidget {
     required VoidCallback onNext,
     required bool isLoading,
     required theme,
+    bool isMenuLogicStep = false,
+    bool hasMenuLogicSelection = false,
   }) {
     final isFirstStep = currentStep == 0;
     final isLastStep = currentStep == totalSteps - 1;
+    
+    // For Menu Logic steps, only show next button if selection is made
+    final showNextButton = !isMenuLogicStep || hasMenuLogicSelection;
+    
     
     return Container(
       padding: const EdgeInsets.all(24),
@@ -716,16 +861,40 @@ class EnhancedRuntimePage extends HookWidget {
           
           if (!isFirstStep) const SizedBox(width: 16),
           
-          // Next/Generate button
-          Expanded(
-            flex: isFirstStep ? 1 : 2,
-            child: AdvancedUITheme.gradientButton(
-              text: isLastStep ? 'GENERATE' : 'CONTINUE',
-              icon: isLastStep ? Icons.auto_awesome : Icons.arrow_forward,
-              onPressed: onNext,
-              isLoading: isLoading,
+          // Next/Generate button - only show if allowed
+          if (showNextButton)
+            Expanded(
+              flex: isFirstStep ? 1 : 2,
+              child: AdvancedUITheme.gradientButton(
+                text: (isLastStep && !isMenuLogicStep) ? 'GENERATE' : 'CONTINUE',
+                icon: (isLastStep && !isMenuLogicStep) ? Icons.auto_awesome : Icons.arrow_forward,
+                onPressed: onNext,
+                isLoading: isLoading,
+              ),
+            )
+          else if (isMenuLogicStep)
+            // Show placeholder message for Menu Logic without selection
+            Expanded(
+              flex: isFirstStep ? 1 : 2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: theme.onSurface.withValues(alpha: 0.2),
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    'Please select an option to continue',
+                    style: TextStyle(
+                      color: theme.onSurface.withValues(alpha: 0.5),
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
         ],
       ),
     );

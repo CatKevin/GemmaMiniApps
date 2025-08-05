@@ -230,7 +230,6 @@ class _OptimizedSwitchCaseRenderer extends HookWidget {
     final selectedOption = useState<String?>(
       this.context.getVariable(switchVar)?.toString()
     );
-    final showContent = useState(false);
     final animationController = useAnimationController(
       duration: const Duration(milliseconds: 400),
     );
@@ -258,9 +257,8 @@ class _OptimizedSwitchCaseRenderer extends HookWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!showContent.value) ...[
-          // Title section
-          AdvancedUITheme.glassmorphicContainer(
+        // Title section
+        AdvancedUITheme.glassmorphicContainer(
             padding: const EdgeInsets.all(20),
             margin: const EdgeInsets.only(bottom: 24),
             child: Column(
@@ -346,80 +344,6 @@ class _OptimizedSwitchCaseRenderer extends HookWidget {
               );
             },
           ),
-          
-          // Continue button
-          if (selectedOption.value != null) ...[
-            const SizedBox(height: 32),
-            Center(
-              child: AdvancedUITheme.gradientButton(
-                text: 'CONTINUE',
-                icon: Icons.arrow_forward,
-                onPressed: () {
-                  showContent.value = true;
-                  HapticFeedback.mediumImpact();
-                },
-              ),
-            ),
-          ],
-        ],
-        
-        // Selected content
-        if (showContent.value && selectedOption.value != null) ...[
-          // Back button
-          TextButton.icon(
-            onPressed: () {
-              showContent.value = false;
-              animationController.forward(from: 0);
-              HapticFeedback.lightImpact();
-            },
-            icon: Icon(Icons.arrow_back, color: theme.primary),
-            label: Text(
-              'Change selection',
-              style: TextStyle(color: theme.primary, fontSize: 16),
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Render selected content
-          Builder(builder: (context) {
-            ComponentSection? sectionToRender;
-            
-            for (final section in component.sections) {
-              if (section.type == CompositeSectionType.caseOption) {
-                final caseValue = section.properties['value'] as String?;
-                if (caseValue == selectedOption.value) {
-                  sectionToRender = section;
-                  break;
-                }
-              }
-            }
-            
-            sectionToRender ??= component.sections.firstWhere(
-              (s) => s.type == CompositeSectionType.default_,
-              orElse: () => ComponentSection(
-                id: 'empty',
-                label: 'DEFAULT',
-                type: CompositeSectionType.default_,
-              ),
-            );
-            
-            return AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: Column(
-                key: ValueKey(sectionToRender.id),
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: sectionToRender.children.map((editableComp) {
-                  return OptimizedComponentRenderer.render(
-                    editableComp.component,
-                    this.context,
-                    onValueChanged,
-                    theme,
-                  );
-                }).toList(),
-              ),
-            );
-          }),
-        ],
       ],
     );
   }

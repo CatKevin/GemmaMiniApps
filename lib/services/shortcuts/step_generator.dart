@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/shortcuts/models.dart';
+import '../../models/shortcuts/editor_models.dart';
 
 /// Intelligent step generator for runtime rendering
 class StepGenerator {
@@ -37,9 +38,33 @@ class StepGenerator {
     }
     
     // Phase 4: Group components into logical steps
-    final remainingComponents = allComponents
-        .where((c) => !processedComponents.contains(c.id))
-        .toList();
+    // Create a map to track component IDs and ensure uniqueness
+    final componentMap = <String, UIComponent>{};
+    for (final component in allComponents) {
+      if (!processedComponents.contains(component.id)) {
+        // If duplicate ID found, create a unique one
+        var uniqueId = component.id;
+        var counter = 1;
+        while (componentMap.containsKey(uniqueId)) {
+          uniqueId = '${component.id}_$counter';
+          counter++;
+        }
+        // Create a new component with unique ID if needed
+        if (uniqueId != component.id) {
+          final newComponent = UIComponent(
+            id: uniqueId,
+            type: component.type,
+            variableBinding: component.variableBinding,
+            properties: component.properties,
+          );
+          componentMap[uniqueId] = newComponent;
+        } else {
+          componentMap[component.id] = component;
+        }
+      }
+    }
+    
+    final remainingComponents = componentMap.values.toList();
     
     while (remainingComponents.isNotEmpty) {
       final component = remainingComponents.first;
@@ -98,6 +123,7 @@ class StepGenerator {
   /// Flatten all components from all screens
   static List<UIComponent> _flattenComponents(ShortcutDefinition shortcut) {
     final components = <UIComponent>[];
+    final seenIds = <String>{};
     
     for (final screen in shortcut.screens) {
       // Skip FinalPromptBuilder components
@@ -105,7 +131,13 @@ class StepGenerator {
           .where((c) => c.type != ComponentType.finalPromptBuilder)
           .toList();
       
-      components.addAll(screenComponents);
+      // Add only components with unique IDs
+      for (final component in screenComponents) {
+        if (!seenIds.contains(component.id)) {
+          seenIds.add(component.id);
+          components.add(component);
+        }
+      }
     }
     
     return components;
@@ -113,8 +145,14 @@ class StepGenerator {
   
   /// Check if component is variable-only (no UI needed)
   static bool _isVariableOnlyComponent(UIComponent component) {
-    return component.type == ComponentType.text ||
-           component.type == ComponentType.variableAssignment ||
+    // Text components with output variables should be hidden
+    if (component.type == ComponentType.text && 
+        component.properties['outputVariable'] != null &&
+        component.properties['outputVariable'].toString().isNotEmpty) {
+      return true;
+    }
+    
+    return component.type == ComponentType.variableAssignment ||
            component.type == ComponentType.variableTransform ||
            (component.type == ComponentType.roleDefinition && 
             component.properties['showInRuntime'] != true);
@@ -133,7 +171,7 @@ class StepGenerator {
     String title = 'Make Your Choice';
     String? subtitle;
     
-    if (compositeType == 'switchCase') {
+    if (compositeType == 'CompositeComponentType.switchCase' || compositeType == 'switchCase') {
       final switchVar = compositeData?['switchVariable'] ?? '';
       title = _generateTitleFromVariable(switchVar);
       subtitle = 'Select one option to continue';
@@ -147,9 +185,147 @@ class StepGenerator {
       type: StepType.selection,
       metadata: {
         'isComposite': true,
-        'compositeType': compositeType,
+        'compositeType': compositeType.contains('switchCase') ? 'CompositeComponentType.switchCase' : compositeType,
+        'requiresDynamicSteps': compositeType.contains('switchCase'), // True for switch-case
+        'componentId': component.id,
       },
     );
+  }
+  
+  /// Generate steps for a specific switch-case branch
+  static List<RenderStep> generateSwitchCaseBranchSteps(
+    UIComponent switchComponent,
+    String selectedOption,
+  ) {
+    final steps = <RenderStep>[];
+    final compositeData = switchComponent.properties['compositeData'] as Map<String, dynamic>?;
+    
+    if (compositeData == null) return steps;
+    
+    // Find the selected section
+    final sections = compositeData['sections'] as List<dynamic>? ?? [];
+    Map<String, dynamic>? selectedSection;
+    
+    for (final section in sections) {
+      final sectionType = section['type'] as String? ?? '';
+      if ((sectionType == 'CompositeSectionType.caseOption' || sectionType == 'caseOption') && 
+          section['properties']?['value'] == selectedOption) {
+        selectedSection = section;
+        break;
+      }
+    }
+    
+    // If no matching case, look for default
+    if (selectedSection == null) {
+      selectedSection = sections.firstWhere(
+        (s) {
+          final type = s['type'] as String? ?? '';
+          return type == 'CompositeSectionType.default_' || type == 'default';
+        },
+        orElse: () => null,
+      );
+    }
+    
+    if (selectedSection == null) return steps;
+    
+    // Extract components from the selected section
+    final children = selectedSection['children'] as List<dynamic>? ?? [];
+    final components = <UIComponent>[];
+    
+    
+    // Track component IDs to ensure uniqueness
+    final usedIds = <String>{};
+    
+    for (final child in children) {
+      try {
+        // The child is an EditableComponent JSON
+        final editableComponent = EditableComponent.fromJson(child as Map<String, dynamic>);
+        var component = editableComponent.component;
+        
+        
+        // Ensure unique ID
+        var uniqueId = component.id;
+        var counter = 1;
+        while (usedIds.contains(uniqueId)) {
+          uniqueId = '${component.id}_branch_$counter';
+          counter++;
+        }
+        
+        if (uniqueId != component.id) {
+          // Create component with unique ID
+          component = UIComponent(
+            id: uniqueId,
+            type: component.type,
+            variableBinding: component.variableBinding,
+            properties: component.properties,
+          );
+        }
+        
+        usedIds.add(uniqueId);
+        components.add(component);
+      } catch (e) {
+        // Silently skip invalid children
+      }
+    }
+    
+    
+    // Group components into steps
+    if (components.isEmpty) {
+      return steps;
+    }
+    
+    // Process components similar to main step generation
+    final processedComponents = <String>{};
+    final remainingComponents = List<UIComponent>.from(components);
+    
+    while (remainingComponents.isNotEmpty) {
+      final component = remainingComponents.first;
+      
+      if (processedComponents.contains(component.id)) {
+        remainingComponents.remove(component);
+        continue;
+      }
+      
+      // Skip variable-only components
+      if (_isVariableOnlyComponent(component)) {
+        processedComponents.add(component.id);
+        remainingComponents.remove(component);
+        continue;
+      }
+      
+      // Handle nested composite components
+      if (_isCompositeComponent(component)) {
+        final step = _createCompositeStep(component);
+        steps.add(step);
+        processedComponents.add(component.id);
+        remainingComponents.remove(component);
+        continue;
+      }
+      
+      // Group related components
+      final group = _findRelatedComponents(
+        component,
+        remainingComponents,
+        processedComponents,
+      );
+      
+      if (group.isNotEmpty) {
+        // Create metadata for switch-case branch steps
+        final metadata = {
+          'fromSwitchCase': true,
+          'parentComponentId': switchComponent.id,
+        };
+        final step = _createStepFromGroup(group, metadata: metadata);
+        steps.add(step);
+        
+        for (final c in group) {
+          processedComponents.add(c.id);
+          remainingComponents.remove(c);
+        }
+      }
+    }
+    
+    return steps;
   }
   
   /// Find related components that should be grouped together
@@ -163,6 +339,9 @@ class StepGenerator {
     // Rules for grouping
     for (final candidate in candidates) {
       if (processed.contains(candidate.id)) continue;
+      
+      // Skip if this is the same component as seed
+      if (candidate.id == seed.id) continue;
       
       // Rule 1: Group similar input types
       if (_areSimilarInputTypes(seed, candidate)) {
@@ -237,7 +416,7 @@ class StepGenerator {
   }
   
   /// Create a step from a group of components
-  static RenderStep _createStepFromGroup(List<UIComponent> group) {
+  static RenderStep _createStepFromGroup(List<UIComponent> group, {Map<String, dynamic>? metadata}) {
     // Determine step type
     final stepType = _determineStepType(group);
     
@@ -245,14 +424,18 @@ class StepGenerator {
     final title = _generateStepTitle(group);
     final subtitle = _generateStepSubtitle(group);
     
+    // Generate unique ID with more entropy
+    final uniqueId = '${DateTime.now().millisecondsSinceEpoch}_${group.first.id}_${group.length}';
+    
     return RenderStep(
-      id: 'step_${DateTime.now().millisecondsSinceEpoch}',
+      id: 'step_$uniqueId',
       title: title,
       subtitle: subtitle,
       components: group,
       type: stepType,
       metadata: {
         'componentCount': group.length,
+        ...?metadata, // Merge any additional metadata
       },
     );
   }

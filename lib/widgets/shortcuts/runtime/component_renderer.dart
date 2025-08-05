@@ -227,9 +227,22 @@ class _TextInputComponent extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = useTextEditingController(
-      text: this.context.getVariable(component.variableBinding ?? '') ?? '',
+    // Use memoized to create controller only once
+    final initialValue = useMemoized(
+      () => this.context.getVariable(component.variableBinding ?? '')?.toString() ?? '',
+      [component.id], // Only recreate if component ID changes
     );
+    
+    final controller = useTextEditingController(text: initialValue);
+    
+    // Update controller text only if variable changes externally
+    useEffect(() {
+      final currentValue = this.context.getVariable(component.variableBinding ?? '')?.toString() ?? '';
+      if (controller.text != currentValue && currentValue != initialValue) {
+        controller.text = currentValue;
+      }
+      return null;
+    }, [this.context.getVariable(component.variableBinding ?? '')]);
 
     final label = component.properties['label'] ?? 'Input';
     final placeholder = component.properties['placeholder'] ?? '';
@@ -312,9 +325,22 @@ class _MultilineTextInputComponent extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = useTextEditingController(
-      text: this.context.getVariable(component.variableBinding ?? '') ?? '',
+    // Use memoized to create controller only once
+    final initialValue = useMemoized(
+      () => this.context.getVariable(component.variableBinding ?? '')?.toString() ?? '',
+      [component.id], // Only recreate if component ID changes
     );
+    
+    final controller = useTextEditingController(text: initialValue);
+    
+    // Update controller text only if variable changes externally
+    useEffect(() {
+      final currentValue = this.context.getVariable(component.variableBinding ?? '')?.toString() ?? '';
+      if (controller.text != currentValue && currentValue != initialValue) {
+        controller.text = currentValue;
+      }
+      return null;
+    }, [this.context.getVariable(component.variableBinding ?? '')]);
 
     final label = component.properties['label'] ?? 'Input';
     final placeholder = component.properties['placeholder'] ?? '';
