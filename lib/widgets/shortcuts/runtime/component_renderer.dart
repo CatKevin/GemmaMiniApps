@@ -2016,7 +2016,7 @@ class _CompositeComponentRenderer extends HookWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                debugInfo,
+                '$debugInfo (${section.children.length} components)',
                 style: TextStyle(
                   color: theme.onSurface,
                   fontSize: 12,
@@ -2026,33 +2026,52 @@ class _CompositeComponentRenderer extends HookWidget {
             ],
           ),
         ),
-        // Render children components
-        Container(
-          margin: const EdgeInsets.only(left: 16),
-          padding: const EdgeInsets.only(left: 16),
-          decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(
-                color: theme.primary.withValues(alpha: 0.3),
-                width: 2,
+        // Render children components or show message if empty
+        if (section.children.isEmpty) ...[
+          Container(
+            margin: const EdgeInsets.only(left: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: theme.surface.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              'No components in this section',
+              style: TextStyle(
+                color: theme.onSurface.withValues(alpha: 0.5),
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
               ),
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: section.children.map((editableComp) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: ComponentRenderer.render(
-                  component: editableComp.component,
-                  context: this.context,
-                  onValueChanged: onValueChanged,
-                  theme: theme,
+        ] else ...[
+          Container(
+            margin: const EdgeInsets.only(left: 16),
+            padding: const EdgeInsets.only(left: 16),
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(
+                  color: theme.primary.withValues(alpha: 0.3),
+                  width: 2,
                 ),
-              );
-            }).toList(),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: section.children.map((editableComp) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: ComponentRenderer.render(
+                    component: editableComp.component,
+                    context: this.context,
+                    onValueChanged: onValueChanged,
+                    theme: theme,
+                  ),
+                );
+              }).toList(),
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

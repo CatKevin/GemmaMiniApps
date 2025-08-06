@@ -98,6 +98,7 @@ class PresetShortcutsService {
         id: 'article_type_menu',
         type: ComponentType.groupContainer,
         properties: {
+          'isComposite': true,
           'compositeType': 'CompositeComponentType.switchCase',
           'compositeData': {
             'id': 'article_type_switch',
@@ -299,7 +300,7 @@ class PresetShortcutsService {
         id: 'final_prompt',
         type: ComponentType.finalPromptBuilder,
         properties: {
-          'template': 'Write a {{tone}} {{articleType}} about "{{topic}}".\n\nWriting Guidelines:\n{{writingGuidelines}}\n\nAdditional requirements:\n- Make it engaging and informative\n- Use clear and concise language\n- Include relevant examples where appropriate',
+          'promptTemplate': 'Write a {{tone}} {{articleType}} about "{{topic}}".\n\nWriting Guidelines:\n{{writingGuidelines}}\n\nAdditional requirements:\n- Make it engaging and informative\n- Use clear and concise language\n- Include relevant examples where appropriate',
         },
       ),
     ];
@@ -432,6 +433,7 @@ class PresetShortcutsService {
         id: 'urgency_logic',
         type: ComponentType.groupContainer,
         properties: {
+          'isComposite': true,
           'compositeType': 'CompositeComponentType.ifElse',
           'compositeData': {
             'id': 'urgency_if_else',
@@ -529,7 +531,7 @@ class PresetShortcutsService {
         id: 'final_prompt_2',
         type: ComponentType.finalPromptBuilder,
         properties: {
-          'template': 'Create a support ticket response for:\n\nCustomer: {{customerEmail}}\nIssue Type: {{issueType}}\nUrgency Level: {{urgencyLevel}}/10\n\nProcessing Strategy:\n{{processingStrategy}}\n\nIssue Description:\n{{issueDescription}}\n\nPlease provide a professional, empathetic response that addresses the issue and sets clear expectations for resolution.',
+          'promptTemplate': 'Create a support ticket response for:\n\nCustomer: {{customerEmail}}\nIssue Type: {{issueType}}\nUrgency Level: {{urgencyLevel}}/10\n\nProcessing Strategy:\n{{processingStrategy}}\n\nIssue Description:\n{{issueDescription}}\n\nPlease provide a professional, empathetic response that addresses the issue and sets clear expectations for resolution.',
         },
       ),
     ];
@@ -719,7 +721,7 @@ class PresetShortcutsService {
         id: 'final_prompt_3',
         type: ComponentType.finalPromptBuilder,
         properties: {
-          'template': 'Write a detailed product review for:\n\n{{reviewFramework}}\n\nThe review should be:\n- Balanced and objective\n- Include specific examples\n- Mention value for money\n- Provide a clear recommendation\n- Be approximately 500 words',
+          'promptTemplate': 'Write a detailed product review for:\n\n{{reviewFramework}}\n\nThe review should be:\n- Balanced and objective\n- Include specific examples\n- Mention value for money\n- Provide a clear recommendation\n- Be approximately 500 words',
         },
       ),
     ];
@@ -820,6 +822,7 @@ class PresetShortcutsService {
         id: 'subject_menu',
         type: ComponentType.groupContainer,
         properties: {
+          'isComposite': true,
           'compositeType': 'CompositeComponentType.switchCase',
           'compositeData': {
             'id': 'subject_switch',
@@ -1015,6 +1018,7 @@ class PresetShortcutsService {
         id: 'difficulty_logic',
         type: ComponentType.groupContainer,
         properties: {
+          'isComposite': true,
           'compositeType': 'CompositeComponentType.ifElse',
           'compositeData': {
             'id': 'difficulty_assessment',
@@ -1080,7 +1084,7 @@ class PresetShortcutsService {
         id: 'final_prompt_4',
         type: ComponentType.finalPromptBuilder,
         properties: {
-          'template': 'Create a personalized {{timeAvailable}}-day learning plan for:\n\nSubject: {{subject}}\nCurrent Level: {{currentLevel}}\nTarget Level: {{targetLevel}}\n\nAssessment: {{difficulty}}\n\nPreferred Learning Styles: {{learningStyle}}\nStart Date: {{startDate}}\n\nPlease include:\n- Weekly milestones\n- Recommended resources\n- Practice exercises\n- Progress checkpoints\n- Time management tips',
+          'promptTemplate': 'Create a personalized {{timeAvailable}}-day learning plan for:\n\nSubject: {{subject}}\nCurrent Level: {{currentLevel}}\nTarget Level: {{targetLevel}}\n\nAssessment: {{difficulty}}\n\nPreferred Learning Styles: {{learningStyle}}\nStart Date: {{startDate}}\n\nPlease include:\n- Weekly milestones\n- Recommended resources\n- Practice exercises\n- Progress checkpoints\n- Time management tips',
         },
       ),
     ];
@@ -1205,6 +1209,7 @@ class PresetShortcutsService {
         id: 'language_menu',
         type: ComponentType.groupContainer,
         properties: {
+          'isComposite': true,
           'compositeType': 'CompositeComponentType.switchCase',
           'compositeData': {
             'id': 'language_switch',
@@ -1362,6 +1367,7 @@ class PresetShortcutsService {
         id: 'test_logic',
         type: ComponentType.groupContainer,
         properties: {
+          'isComposite': true,
           'compositeType': 'CompositeComponentType.ifElse',
           'compositeData': {
             'id': 'test_if_else',
@@ -1440,7 +1446,7 @@ class PresetShortcutsService {
         id: 'final_prompt_5',
         type: ComponentType.finalPromptBuilder,
         properties: {
-          'template': 'Generate {{language}} code with the following specifications:\n\n{{codeSpecs}}\n\nFunctionality Requirements:\n{{functionality}}\n\nCode Requirements:\n- Use {{framework}} framework\n- Follow {{codeStyle}} coding style\n- Include comprehensive error handling\n- Follow best practices for {{language}}\n- Make the code production-ready\n{{#if includeTests}}- Include complete unit tests{{/if}}\n{{#if includeComments}}- Add detailed comments{{/if}}',
+          'promptTemplate': 'Generate {{language}} code with the following specifications:\n\n{{codeSpecs}}\n\nFunctionality Requirements:\n{{functionality}}\n\nCode Requirements:\n- Use {{framework}} framework\n- Follow {{codeStyle}} coding style\n- Include comprehensive error handling\n- Follow best practices for {{language}}\n- Make the code production-ready\n{{#if includeTests}}- Include complete unit tests{{/if}}\n{{#if includeComments}}- Add detailed comments{{/if}}',
         },
       ),
     ];

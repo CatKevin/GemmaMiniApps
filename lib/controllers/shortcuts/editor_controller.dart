@@ -80,10 +80,11 @@ class EditorController extends GetxController {
     if (existingFinalPromptIndex != -1) {
       // FinalPromptBuilder exists, ensure it's at the end
       if (existingFinalPromptIndex != components.length - 1) {
-        // Move it to the end
+        // Move it to the end, preserving all its properties
         final finalPromptBuilder = components.removeAt(existingFinalPromptIndex);
         components.add(finalPromptBuilder);
       }
+      // The existing FinalPromptBuilder's properties are preserved
     } else {
       // No FinalPromptBuilder exists, create a new one
       final finalPromptBuilder = UIComponent(
