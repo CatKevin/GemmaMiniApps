@@ -794,6 +794,8 @@ class EnhancedVariableSelector extends HookWidget {
         return Icons.list;
       case VariableType.map:
         return Icons.data_object;
+      case VariableType.imageList:
+        return Icons.image;
     }
   }
 }

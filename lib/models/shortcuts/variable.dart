@@ -96,6 +96,8 @@ extension VariableTypeExtension on VariableType {
         return 'List';
       case VariableType.map:
         return 'Object';
+      case VariableType.imageList:
+        return 'Images';
     }
   }
   
@@ -113,6 +115,8 @@ extension VariableTypeExtension on VariableType {
         return [];
       case VariableType.map:
         return {};
+      case VariableType.imageList:
+        return <dynamic>[];
     }
   }
 }

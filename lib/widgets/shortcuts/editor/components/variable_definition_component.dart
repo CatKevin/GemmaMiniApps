@@ -504,6 +504,34 @@ class VariableDefinitionComponent extends HookWidget {
             ),
           ),
         );
+        
+      case VariableType.imageList:
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.background,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: theme.onSurface.withValues(alpha: 0.1),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.image,
+                color: theme.onSurface.withValues(alpha: 0.6),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Default: No images selected',
+                style: TextStyle(
+                  color: theme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ),
+        );
     }
   }
   
@@ -549,6 +577,8 @@ class VariableDefinitionComponent extends HookWidget {
         return Icons.list;
       case VariableType.map:
         return Icons.data_object;
+      case VariableType.imageList:
+        return Icons.image;
     }
   }
   

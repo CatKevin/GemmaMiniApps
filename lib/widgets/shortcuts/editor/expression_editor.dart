@@ -442,6 +442,8 @@ class ExpressionEditor extends HookWidget {
         return Icons.data_object;
       case VariableType.date:
         return Icons.calendar_today;
+      case VariableType.imageList:
+        return Icons.image;
     }
   }
   
@@ -459,6 +461,8 @@ class ExpressionEditor extends HookWidget {
         return 'map';
       case VariableType.date:
         return 'date';
+      case VariableType.imageList:
+        return 'images';
     }
   }
   
@@ -481,6 +485,8 @@ class ExpressionEditor extends HookWidget {
         return 'e.g., {"key": "value"}';
       case VariableType.date:
         return 'e.g., 2024-01-01';
+      case VariableType.imageList:
+        return 'image data (binary)';
     }
   }
   

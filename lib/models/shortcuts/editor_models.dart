@@ -638,6 +638,58 @@ class ComponentTemplateLibrary {
         ),
       ],
     ),
+    ComponentTemplate(
+      id: 'image-input',
+      name: 'Image Input',
+      description: 'Image upload and capture',
+      icon: Icons.add_a_photo,
+      category: ComponentCategory.input,
+      type: ComponentType.imageInput,
+      defaultProperties: {
+        'allowCamera': true,
+        'allowGallery': true,
+        'maxImages': 1,
+        'required': false,
+      },
+      editableProperties: [
+        ComponentProperty(
+          key: 'label',
+          label: 'Label',
+          type: PropertyType.text,
+          required: true,
+        ),
+        ComponentProperty(
+          key: 'variableName',
+          label: 'Variable Name',
+          type: PropertyType.variable,
+          required: false,
+        ),
+        ComponentProperty(
+          key: 'allowCamera',
+          label: 'Allow Camera',
+          type: PropertyType.boolean,
+          defaultValue: true,
+        ),
+        ComponentProperty(
+          key: 'allowGallery',
+          label: 'Allow Gallery',
+          type: PropertyType.boolean,
+          defaultValue: true,
+        ),
+        ComponentProperty(
+          key: 'maxImages',
+          label: 'Max Images',
+          type: PropertyType.number,
+          defaultValue: 1,
+        ),
+        ComponentProperty(
+          key: 'required',
+          label: 'Required',
+          type: PropertyType.boolean,
+          defaultValue: false,
+        ),
+      ],
+    ),
     
     // Display Components
     ComponentTemplate(
@@ -920,6 +972,407 @@ class ShortcutTemplates {
             'options': ['Professional', 'Casual', 'Friendly', 'Formal', 'Humorous'],
           },
           variableBinding: 'contentTone',
+        ),
+      ],
+    ),
+    // OOTD Style Check Template
+    ShortcutTemplate(
+      id: 'ootd-style-check',
+      name: 'OOTD Style Check',
+      description: 'Get instant fashion feedback and styling tips from your AI personal stylist',
+      icon: Icons.checkroom,
+      category: 'life',
+      components: [
+        UIComponent(
+          id: 'title',
+          type: ComponentType.descriptionText,
+          properties: {
+            'title': '✨ OOTD Style Check ✨',
+            'content': 'Take a photo of your outfit and get instant feedback from your AI personal stylist!',
+          },
+        ),
+        UIComponent(
+          id: 'outfit-image',
+          type: ComponentType.imageInput,
+          properties: {
+            'label': 'Upload Your Outfit Photo',
+            'allowCamera': true,
+            'allowGallery': true,
+            'maxImages': 1,
+            'required': true,
+          },
+          variableBinding: 'outfitImage',
+        ),
+        UIComponent(
+          id: 'occasion-input',
+          type: ComponentType.dropdown,
+          properties: {
+            'label': 'What\'s the occasion?',
+            'options': [
+              'Work/Office',
+              'Casual Hangout',
+              'Date Night',
+              'Party/Club',
+              'Formal Event',
+              'Sports/Gym',
+              'Weekend Brunch',
+              'Travel',
+              'Other'
+            ],
+            'placeholder': 'Select the occasion',
+          },
+          variableBinding: 'occasion',
+        ),
+        UIComponent(
+          id: 'weather-input',
+          type: ComponentType.singleSelect,
+          properties: {
+            'label': 'What\'s the weather like?',
+            'options': [
+              'Hot & Sunny',
+              'Warm',
+              'Cool',
+              'Cold',
+              'Rainy',
+              'Snowy',
+              'Windy'
+            ],
+          },
+          variableBinding: 'weather',
+        ),
+        UIComponent(
+          id: 'style-preferences',
+          type: ComponentType.multiSelect,
+          properties: {
+            'label': 'What style vibe are you going for? (Optional)',
+            'options': [
+              'Minimalist',
+              'Trendy',
+              'Classic',
+              'Edgy',
+              'Bohemian',
+              'Preppy',
+              'Streetwear',
+              'Business Casual',
+              'Athleisure',
+              'Vintage'
+            ],
+          },
+          variableBinding: 'stylePreferences',
+        ),
+        UIComponent(
+          id: 'specific-concerns',
+          type: ComponentType.multilineTextInput,
+          properties: {
+            'label': 'Any specific concerns or questions? (Optional)',
+            'placeholder': 'e.g., "Is this too formal?", "Do the colors work together?"',
+            'rows': 3,
+            'required': false,
+          },
+          variableBinding: 'specificConcerns',
+        ),
+        UIComponent(
+          id: 'role-definition',
+          type: ComponentType.roleDefinition,
+          properties: {
+            'role': 'You are a friendly, encouraging, and fashion-forward personal stylist with years of experience in fashion and styling. Your goal is to help people feel confident and stylish by providing constructive, positive, and actionable fashion advice.',
+          },
+        ),
+        UIComponent(
+          id: 'task-description',
+          type: ComponentType.taskDescription,
+          properties: {
+            'task': 'Analyze the uploaded outfit photo and provide detailed fashion feedback.',
+          },
+        ),
+        UIComponent(
+          id: 'context-provider',
+          type: ComponentType.contextProvider,
+          properties: {
+            'context': 'The user has shared their Outfit of the Day (OOTD) and wants your expert opinion. Consider the occasion: {{occasion}}, weather: {{weather}}, and their style preferences: {{stylePreferences}}. {{#if specificConcerns}}They also mentioned: {{specificConcerns}}{{/if}}',
+          },
+        ),
+        UIComponent(
+          id: 'prompt-text',
+          type: ComponentType.text,
+          properties: {
+            'content': '''Please analyze my outfit based on the photo I've provided. 
+
+Structure your response as follows:
+
+**First Impression** 💫
+Start with a warm, encouraging opening that highlights what's working well in the outfit.
+
+**Style Analysis** 👗
+- **Color Palette & Coordination**: How well do the colors work together?
+- **Fit & Silhouette**: Comment on the fit, proportions, and overall silhouette
+- **Style Cohesion**: Does everything work together as a cohesive look?
+- **Occasion Appropriateness**: Is this suitable for {{occasion}} and {{weather}} weather?
+
+**What's Working** ✅
+List 2-3 specific things that are particularly good about this outfit.
+
+**Styling Suggestions** 💡
+Provide 2-3 specific, actionable suggestions to elevate this look. Frame these as fun ideas rather than criticisms:
+- "Have you thought about trying..."
+- "This would look even more amazing with..."
+- "A fun twist could be..."
+
+**Quick Tips** 🎯
+Share 1-2 quick styling tips relevant to this type of outfit or occasion.
+
+**Confidence Boost** ⭐
+End with an encouraging, confidence-boosting message that makes me feel great about my style choices.
+
+Remember to:
+- Be friendly and supportive, like a best friend who's great at fashion
+- Use encouraging language and emoji to keep it fun
+- Provide specific, actionable advice
+- Consider the context (occasion, weather, style preferences)
+- Focus on positives while gently suggesting improvements''',
+          },
+        ),
+        UIComponent(
+          id: 'final-prompt',
+          type: ComponentType.finalPromptBuilder,
+          properties: {
+            'includeImage': true,
+            'imageVariable': 'outfitImage',
+            'outputFormat': 'markdown',
+          },
+        ),
+      ],
+    ),
+    // Quick Fit Check Template (Simplified version)
+    ShortcutTemplate(
+      id: 'quick-fit-check',
+      name: 'Quick Fit Check',
+      description: 'Get a quick vibe check on your outfit - perfect for when you need fast feedback!',
+      icon: Icons.flash_on,
+      category: 'life',
+      components: [
+        UIComponent(
+          id: 'title',
+          type: ComponentType.descriptionText,
+          properties: {
+            'title': '👗 Quick Fit Check 👖',
+            'content': 'Snap a pic and get instant vibes on your fit!',
+          },
+        ),
+        UIComponent(
+          id: 'outfit-photo',
+          type: ComponentType.imageInput,
+          properties: {
+            'label': 'Show me your fit! 📸',
+            'allowCamera': true,
+            'allowGallery': true,
+            'maxImages': 1,
+            'required': true,
+          },
+          variableBinding: 'fitPhoto',
+        ),
+        UIComponent(
+          id: 'vibe-check',
+          type: ComponentType.textInput,
+          properties: {
+            'label': 'Where you heading? (Optional)',
+            'placeholder': 'e.g., brunch, work, date, just vibing',
+            'required': false,
+          },
+          variableBinding: 'goingWhere',
+        ),
+        UIComponent(
+          id: 'role-def',
+          type: ComponentType.roleDefinition,
+          properties: {
+            'role': 'You are a Gen-Z fashion bestie who gives honest but hype fashion advice. You speak casually using modern slang and emojis, and you always gas up your friends while keeping it real.',
+          },
+        ),
+        UIComponent(
+          id: 'prompt',
+          type: ComponentType.text,
+          properties: {
+            'content': '''Yo! Check out my fit and give me the vibe check! {{#if goingWhere}}I'm heading to {{goingWhere}}.{{/if}}
+
+Drop your take in this format:
+
+**The Vibe** ✨
+Quick first impression - is it giving? What's the energy?
+
+**Fire Elements** 🔥
+2-3 things that are absolutely slaying
+
+**Level Up Ideas** 📈
+1-2 quick tweaks that would make this fit go even harder (keep it positive tho!)
+
+**Final Verdict** 💯
+Rate the fit and drop a hype comment!
+
+Keep it:
+- Short and snappy (this is a quick check!)
+- Fun with emojis but not overboard
+- Honest but always supportive
+- Use current slang naturally (slay, fire, it's giving, ate, no cap, etc.)
+- Like you're hyping up your bestie before they head out''',
+          },
+        ),
+        UIComponent(
+          id: 'final',
+          type: ComponentType.finalPromptBuilder,
+          properties: {
+            'includeImage': true,
+            'imageVariable': 'fitPhoto',
+            'outputFormat': 'markdown',
+          },
+        ),
+      ],
+    ),
+    // Professional Dress Code Analyzer
+    ShortcutTemplate(
+      id: 'dress-code-analyzer',
+      name: 'Professional Dress Code Check',
+      description: 'Ensure your outfit meets professional standards for work, interviews, or business events',
+      icon: Icons.business_center,
+      category: 'business',
+      components: [
+        UIComponent(
+          id: 'title',
+          type: ComponentType.descriptionText,
+          properties: {
+            'title': '💼 Professional Dress Code Analyzer',
+            'content': 'Make sure your outfit is appropriate for professional settings',
+          },
+        ),
+        UIComponent(
+          id: 'outfit-upload',
+          type: ComponentType.imageInput,
+          properties: {
+            'label': 'Upload Your Professional Outfit',
+            'allowCamera': true,
+            'allowGallery': true,
+            'maxImages': 1,
+            'required': true,
+          },
+          variableBinding: 'professionalOutfit',
+        ),
+        UIComponent(
+          id: 'dress-code',
+          type: ComponentType.dropdown,
+          properties: {
+            'label': 'What\'s your workplace dress code?',
+            'options': [
+              'Business Formal',
+              'Business Professional',
+              'Business Casual',
+              'Smart Casual',
+              'Creative/Startup Casual',
+              'Not Sure'
+            ],
+            'required': true,
+          },
+          variableBinding: 'dressCode',
+        ),
+        UIComponent(
+          id: 'event-type',
+          type: ComponentType.singleSelect,
+          properties: {
+            'label': 'What\'s the occasion?',
+            'options': [
+              'Regular workday',
+              'Important meeting',
+              'Client presentation',
+              'Job interview',
+              'Company event',
+              'Conference/Networking',
+              'Video call'
+            ],
+          },
+          variableBinding: 'eventType',
+        ),
+        UIComponent(
+          id: 'industry',
+          type: ComponentType.dropdown,
+          properties: {
+            'label': 'Industry/Field',
+            'options': [
+              'Finance/Banking',
+              'Law',
+              'Tech/Software',
+              'Healthcare',
+              'Education',
+              'Creative/Design',
+              'Consulting',
+              'Real Estate',
+              'Government',
+              'Other'
+            ],
+          },
+          variableBinding: 'industry',
+        ),
+        UIComponent(
+          id: 'role-setup',
+          type: ComponentType.roleDefinition,
+          properties: {
+            'role': 'You are a professional image consultant with extensive experience in corporate dress codes across various industries. You provide clear, practical advice on professional attire while being sensitive to individual style and comfort.',
+          },
+        ),
+        UIComponent(
+          id: 'context-setup',
+          type: ComponentType.contextProvider,
+          properties: {
+            'context': 'The user needs to ensure their outfit is appropriate for {{eventType}} in the {{industry}} industry with a {{dressCode}} dress code.',
+          },
+        ),
+        UIComponent(
+          id: 'analysis-prompt',
+          type: ComponentType.text,
+          properties: {
+            'content': '''Please analyze my professional outfit for appropriateness and impact.
+
+**Dress Code Compliance** ✅
+Does this outfit meet {{dressCode}} standards for {{industry}}? 
+- Rate compliance: Fully Appropriate / Mostly Appropriate / Needs Adjustment
+- Explain your assessment
+
+**Professional Impact** 💼
+- **First Impression**: What message does this outfit convey?
+- **Authority & Credibility**: Does it project competence and professionalism?
+- **Industry Appropriateness**: Is this suitable for {{industry}} culture?
+
+**Detailed Analysis** 📋
+Evaluate each element:
+- **Top/Shirt**: Fit, color, style appropriateness
+- **Bottom/Pants/Skirt**: Length, fit, formality level
+- **Footwear**: Style and condition assessment
+- **Accessories**: Are they enhancing or distracting?
+- **Grooming/Overall Polish**: General presentation
+
+**Areas of Excellence** ⭐
+What aspects of this outfit work particularly well?
+
+**Professional Recommendations** 📝
+Provide 2-3 specific adjustments that would enhance professionalism:
+- Be specific and actionable
+- Consider the {{eventType}} context
+- Respect the {{dressCode}} requirements
+
+**Quick Tips for {{industry}}** 💡
+Share 1-2 industry-specific dress code insights
+
+**Confidence Builder** 🎯
+End with encouragement about professional presentation
+
+Note: Consider cultural sensitivity and avoid assumptions about body type or personal style preferences.''',
+          },
+        ),
+        UIComponent(
+          id: 'build-prompt',
+          type: ComponentType.finalPromptBuilder,
+          properties: {
+            'includeImage': true,
+            'imageVariable': 'professionalOutfit',
+            'outputFormat': 'markdown',
+          },
         ),
       ],
     ),

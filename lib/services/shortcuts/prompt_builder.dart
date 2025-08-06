@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import '../../models/shortcuts/models.dart';
 
 /// Service for building prompts from shortcut definitions and collected data
@@ -58,8 +59,15 @@ class PromptBuilder {
         
         // Handle different value types
         if (value is List) {
-          // Join list items with commas
-          return value.map((item) => item.toString()).join(', ');
+          // Check if this is an image list (contains Uint8List items)
+          if (value.isNotEmpty && value.first is Uint8List) {
+            // For image variables, return a placeholder text
+            final count = value.length;
+            return '[${count} image${count == 1 ? '' : 's'} attached]';
+          } else {
+            // Regular list - join items with commas
+            return value.map((item) => item.toString()).join(', ');
+          }
         } else if (value is Map) {
           // Convert map to readable format
           return value.entries
@@ -317,4 +325,73 @@ class PromptBuilder {
     
     return errors;
   }
+
+  /// Extract all image data from the execution context
+  /// Returns a list of all images from image variables
+  static List<Uint8List> extractImages(ExecutionContext context) {
+    final allImages = <Uint8List>[];
+    
+    // Get all image variables from the context
+    final imageVariables = context.getAllImageVariables();
+    
+    for (final images in imageVariables.values) {
+      for (final image in images) {
+        if (image is Uint8List) {
+          allImages.add(image);
+        }
+      }
+    }
+    
+    return allImages;
+  }
+
+  /// Build prompt result that includes both text and images
+  static PromptBuildResult buildPromptWithImages({
+    required String template,
+    required ExecutionContext context,
+  }) {
+    final promptText = buildPromptFromTemplate(
+      template: template,
+      context: context,
+    );
+    
+    final images = extractImages(context);
+    
+    return PromptBuildResult(
+      text: promptText,
+      images: images,
+    );
+  }
+
+  /// Build prompt result from shortcut definition
+  static PromptBuildResult buildPromptWithImagesFromDefinition({
+    required ShortcutDefinition definition,
+    required ExecutionContext context,
+  }) {
+    final promptText = buildPrompt(
+      definition: definition,
+      context: context,
+    );
+    
+    final images = extractImages(context);
+    
+    return PromptBuildResult(
+      text: promptText,
+      images: images,
+    );
+  }
+}
+
+/// Result of prompt building that includes both text and images
+class PromptBuildResult {
+  final String text;
+  final List<Uint8List> images;
+
+  PromptBuildResult({
+    required this.text,
+    required this.images,
+  });
+
+  bool get hasImages => images.isNotEmpty;
+  int get imageCount => images.length;
 }

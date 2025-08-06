@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:get/get.dart';
 import '../../core/theme/controllers/theme_controller.dart';
 
@@ -176,16 +177,10 @@ class MessageBubble extends HookWidget {
                                 if (text.isNotEmpty) const SizedBox(height: 8),
                               ],
                               if (text.isNotEmpty)
-                                SelectableText(
-                                  text,
-                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: isError
-                                        ? theme.error
-                                        : isUser
-                                            ? theme.onPrimary
-                                            : theme.onSurface.withValues(alpha: 0.9),
-                                    height: 1.4,
-                                  ),
+                                MarkdownBody(
+                                  data: text,
+                                  selectable: true,
+                                  styleSheet: _buildMarkdownStyleSheet(context, theme, isError, isUser),
                                 ),
                             ],
                           ),
@@ -322,6 +317,154 @@ class MessageBubble extends HookWidget {
           ),
         );
       },
+    );
+  }
+
+  /// Builds a themed Markdown style sheet
+  MarkdownStyleSheet _buildMarkdownStyleSheet(
+    BuildContext context,
+    dynamic theme,
+    bool isError,
+    bool isUser,
+  ) {
+    final baseColor = isError
+        ? theme.error
+        : isUser
+            ? theme.onPrimary
+            : theme.onSurface.withValues(alpha: 0.9);
+
+    final headingColor = isError
+        ? theme.error
+        : isUser
+            ? theme.onPrimary.withValues(alpha: 0.95)
+            : theme.onSurface.withValues(alpha: 0.95);
+
+    final codeBackgroundColor = isUser
+        ? theme.onPrimary.withValues(alpha: 0.1)
+        : theme.onSurface.withValues(alpha: 0.05);
+
+    final codeBorderColor = isUser
+        ? theme.onPrimary.withValues(alpha: 0.2)
+        : theme.onSurface.withValues(alpha: 0.1);
+
+    return MarkdownStyleSheet(
+      // Text styles
+      p: Theme.of(context).textTheme.bodyLarge?.copyWith(
+        color: baseColor,
+        height: 1.4,
+        fontSize: 16,
+      ),
+      
+      // Heading styles
+      h1: Theme.of(context).textTheme.headlineLarge?.copyWith(
+        color: headingColor,
+        fontWeight: FontWeight.bold,
+        fontSize: 28,
+      ),
+      h2: Theme.of(context).textTheme.headlineMedium?.copyWith(
+        color: headingColor,
+        fontWeight: FontWeight.bold,
+        fontSize: 24,
+      ),
+      h3: Theme.of(context).textTheme.headlineSmall?.copyWith(
+        color: headingColor,
+        fontWeight: FontWeight.w600,
+        fontSize: 20,
+      ),
+      h4: Theme.of(context).textTheme.titleLarge?.copyWith(
+        color: headingColor,
+        fontWeight: FontWeight.w600,
+        fontSize: 18,
+      ),
+      h5: Theme.of(context).textTheme.titleMedium?.copyWith(
+        color: headingColor,
+        fontWeight: FontWeight.w600,
+        fontSize: 16,
+      ),
+      h6: Theme.of(context).textTheme.titleSmall?.copyWith(
+        color: headingColor,
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
+      ),
+      
+      // Strong and emphasis
+      strong: TextStyle(
+        color: baseColor,
+        fontWeight: FontWeight.bold,
+        fontSize: 16,
+      ),
+      em: TextStyle(
+        color: baseColor,
+        fontStyle: FontStyle.italic,
+        fontSize: 16,
+      ),
+      
+      // Code styles
+      code: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        color: baseColor,
+        fontFamily: 'monospace',
+        fontSize: 14,
+        backgroundColor: codeBackgroundColor,
+      ),
+      codeblockDecoration: BoxDecoration(
+        color: codeBackgroundColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: codeBorderColor),
+      ),
+      codeblockPadding: const EdgeInsets.all(12),
+      
+      // List styles
+      listBullet: Theme.of(context).textTheme.bodyLarge?.copyWith(
+        color: baseColor,
+        height: 1.4,
+      ),
+      
+      // Link styles
+      a: TextStyle(
+        color: isUser ? theme.onPrimary : theme.primary,
+        decoration: TextDecoration.underline,
+      ),
+      
+      // Blockquote styles
+      blockquote: Theme.of(context).textTheme.bodyLarge?.copyWith(
+        color: baseColor.withValues(alpha: 0.8),
+        fontStyle: FontStyle.italic,
+        height: 1.4,
+      ),
+      blockquoteDecoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: isUser ? theme.onPrimary.withValues(alpha: 0.3) : theme.primary.withValues(alpha: 0.3),
+            width: 4,
+          ),
+        ),
+      ),
+      blockquotePadding: const EdgeInsets.only(left: 16, top: 8, bottom: 8),
+      
+      // Table styles
+      tableHead: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        color: headingColor,
+        fontWeight: FontWeight.bold,
+      ),
+      tableBody: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        color: baseColor,
+      ),
+      tableBorder: TableBorder.all(
+        color: codeBorderColor,
+        width: 1,
+      ),
+      tableHeadAlign: TextAlign.left,
+      tableCellsPadding: const EdgeInsets.all(8),
+      
+      // Horizontal rule
+      horizontalRuleDecoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: codeBorderColor,
+            width: 1,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -7,6 +7,7 @@ import '../../widgets/shortcuts/runtime/component_renderer.dart';
 import '../../services/shortcuts/prompt_builder.dart';
 import '../../services/shortcuts/mock_ai_service.dart';
 import '../../services/shortcuts/storage_service.dart';
+import '../../controllers/chat/gemma_chat_controller.dart';
 
 class RuntimePage extends HookWidget {
   const RuntimePage({super.key});
@@ -66,6 +67,44 @@ class RuntimePage extends HookWidget {
     );
   }
 
+  // Send prompt and images to chat system
+  void _sendToChat(PromptBuildResult result) {
+    try {
+      // Get or create GemmaChatController
+      GemmaChatController? gemmaController;
+      try {
+        gemmaController = Get.find<GemmaChatController>();
+      } catch (e) {
+        // Initialize if not found
+        Get.put(GemmaChatController());
+        gemmaController = Get.find<GemmaChatController>();
+      }
+      
+      // Clear any existing selected images
+      gemmaController.selectedImages.clear();
+      
+      // Add images from the shortcut execution
+      for (final image in result.images) {
+        gemmaController.addImage(image);
+      }
+      
+      // Send the message with images
+      gemmaController.sendMessage(result.text);
+      
+      // Navigate back to chat to show the message
+      Get.back(); // Close the runtime page
+      
+    } catch (e) {
+      print('Error sending to chat: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to send to chat: ${e.toString()}',
+        backgroundColor: Get.theme.colorScheme.error,
+        colorText: Get.theme.colorScheme.onError,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeController = ThemeController.to;
@@ -120,7 +159,7 @@ class RuntimePage extends HookWidget {
         
         Future.delayed(const Duration(milliseconds: 500), () {
           try {
-            String prompt;
+            PromptBuildResult result;
             
             // Check if we have a FinalPromptBuilder component
             final screens = shortcut.value!.screens;
@@ -140,19 +179,22 @@ class RuntimePage extends HookWidget {
             if (finalPromptBuilder != null) {
               // Use the new approach - get prompt from FinalPromptBuilder
               final promptTemplate = finalPromptBuilder.properties['promptTemplate'] as String? ?? '';
-              prompt = PromptBuilder.buildPromptFromTemplate(
+              result = PromptBuilder.buildPromptWithImages(
                 template: promptTemplate,
                 context: executionContext.value!,
               );
             } else {
               // Fallback to old approach for backward compatibility
-              prompt = PromptBuilder.buildPrompt(
+              result = PromptBuilder.buildPromptWithImagesFromDefinition(
                 definition: shortcut.value!,
                 context: executionContext.value!,
               );
             }
             
-            generatedPrompt.value = prompt;
+            // Send to chat system instead of just displaying
+            _sendToChat(result);
+            
+            generatedPrompt.value = result.text;
             isLoading.value = false;
           } catch (e) {
             // Handle error

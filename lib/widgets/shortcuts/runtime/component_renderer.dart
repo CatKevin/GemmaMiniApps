@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import '../../../core/theme/models/theme_config.dart';
 import '../../../models/shortcuts/models.dart';
-import '../../../models/shortcuts/composite_component.dart';
+import '../../../services/gemma/image_picker_service.dart';
 
 /// Factory for rendering UI components dynamically
 class ComponentRenderer {
@@ -223,6 +223,15 @@ class ComponentRenderer {
           component: component,
           theme: theme,
           message: 'Integration component coming soon',
+        );
+
+      // Image input component
+      case ComponentType.imageInput:
+        return _ImageInputComponent(
+          component: component,
+          context: context,
+          onValueChanged: onValueChanged,
+          theme: theme,
         );
 
       // Advanced UI components (not yet implemented)
@@ -2359,6 +2368,301 @@ class _CompositeComponentRenderer extends HookWidget {
                   ),
                 );
               }).toList(),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Image input component that allows users to select and preview images
+class _ImageInputComponent extends HookWidget {
+  final UIComponent component;
+  final ExecutionContext context;
+  final Function(String, dynamic) onValueChanged;
+  final ThemeConfig theme;
+
+  const _ImageInputComponent({
+    required this.component,
+    required this.context,
+    required this.onValueChanged,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedImages = useState<List<Uint8List>>([]);
+    
+    // Get component properties
+    final label = component.properties['label'] ?? 'Select Images';
+    final prompt = component.properties['prompt'] ?? 'Tap to select images';
+    final maxImages = component.properties['maxImages'] as int? ?? 5;
+    final required = component.properties['required'] ?? false;
+    final variableBinding = component.variableBinding ?? 'images';
+
+    // Load existing images from context if available
+    useEffect(() {
+      final existingImages = this.context.getImageVariable(variableBinding);
+      if (existingImages != null) {
+        selectedImages.value = existingImages.cast<Uint8List>();
+      }
+      return null;
+    }, []);
+
+    void handleImageSelection() async {
+      try {
+        final images = await ImagePickerService.showImageSourceDialog(context);
+        if (images.isNotEmpty) {
+          final newImages = [...selectedImages.value];
+          for (final image in images) {
+            if (newImages.length < maxImages) {
+              newImages.add(image);
+            }
+          }
+          selectedImages.value = newImages;
+          
+          // Update the execution context
+          this.context.setImageVariable(variableBinding, newImages);
+          onValueChanged(variableBinding, newImages);
+        }
+      } catch (e) {
+        print('Error selecting images: $e');
+        // Show error feedback to user
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to select images: $e'),
+            backgroundColor: theme.error,
+          ),
+        );
+      }
+    }
+
+    void removeImage(int index) {
+      final newImages = List<Uint8List>.from(selectedImages.value);
+      newImages.removeAt(index);
+      selectedImages.value = newImages;
+      
+      // Update the execution context
+      this.context.setImageVariable(variableBinding, newImages);
+      onValueChanged(variableBinding, newImages);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Label
+        Text(
+          label + (required ? ' *' : ''),
+          style: TextStyle(
+            color: theme.onBackground,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        
+        // Prompt text
+        if (prompt.isNotEmpty) ...[
+          Text(
+            prompt,
+            style: TextStyle(
+              color: theme.onBackground.withValues(alpha: 0.7),
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        
+        // Image selection button or selected images
+        if (selectedImages.value.isEmpty) ...[
+          // Empty state - show selection button
+          GestureDetector(
+            onTap: handleImageSelection,
+            child: Container(
+              width: double.infinity,
+              height: 120,
+              decoration: BoxDecoration(
+                color: theme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: theme.onSurface.withValues(alpha: 0.2),
+                  style: BorderStyle.solid,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.add_photo_alternate_outlined,
+                    size: 48,
+                    color: theme.primary.withValues(alpha: 0.7),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tap to select images',
+                    style: TextStyle(
+                      color: theme.onSurface.withValues(alpha: 0.7),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ] else ...[
+          // Selected images preview
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image count and add more button
+              Row(
+                children: [
+                  Icon(
+                    Icons.image,
+                    size: 16,
+                    color: theme.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${selectedImages.value.length} image${selectedImages.value.length == 1 ? '' : 's'} selected',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (selectedImages.value.length < maxImages)
+                    GestureDetector(
+                      onTap: handleImageSelection,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: theme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.add,
+                              size: 14,
+                              color: theme.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Add more',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: theme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              
+              // Image thumbnails
+              SizedBox(
+                height: 80,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: selectedImages.value.length,
+                  itemBuilder: (context, index) {
+                    return Container(
+                      margin: EdgeInsets.only(right: index < selectedImages.value.length - 1 ? 8 : 0),
+                      width: 80,
+                      height: 80,
+                      child: Stack(
+                        children: [
+                          // Image thumbnail
+                          GestureDetector(
+                            onTap: () {
+                              // Show full screen preview
+                              showDialog(
+                                context: context,
+                                barrierColor: Colors.black87,
+                                builder: (context) => Dialog.fullscreen(
+                                  backgroundColor: Colors.black,
+                                  child: Stack(
+                                    children: [
+                                      Center(
+                                        child: InteractiveViewer(
+                                          child: Image.memory(selectedImages.value[index]),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        top: MediaQuery.of(context).padding.top + 8,
+                                        right: 16,
+                                        child: IconButton(
+                                          icon: const Icon(
+                                            Icons.close,
+                                            color: Colors.white,
+                                            size: 32,
+                                          ),
+                                          onPressed: () => Navigator.of(context).pop(),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(
+                                selectedImages.value[index],
+                                fit: BoxFit.cover,
+                                width: 80,
+                                height: 80,
+                              ),
+                            ),
+                          ),
+                          
+                          // Remove button
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: GestureDetector(
+                              onTap: () => removeImage(index),
+                              child: Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.7),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+        
+        // Validation message
+        if (required && selectedImages.value.isEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Please select at least one image',
+            style: TextStyle(
+              color: theme.error,
+              fontSize: 12,
             ),
           ),
         ],

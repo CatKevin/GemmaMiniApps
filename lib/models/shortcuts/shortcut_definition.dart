@@ -314,6 +314,7 @@ enum ComponentType {
   markdown,
   codeEditor,
   chartDisplay,
+  imageInput,
   
   // Prompt components
   roleDefinition,
@@ -369,6 +370,7 @@ enum VariableType {
   date,
   list,
   map,
+  imageList,
 }
 
 /// Validation rule for components

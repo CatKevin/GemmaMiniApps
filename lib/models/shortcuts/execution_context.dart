@@ -31,6 +31,37 @@ class ExecutionContext {
     return variables.containsKey(name);
   }
 
+  /// Set image data for a variable
+  void setImageVariable(String name, List<dynamic> imageData) {
+    variables[name] = imageData;
+  }
+
+  /// Get image data for a variable
+  List<dynamic>? getImageVariable(String name) {
+    final value = variables[name];
+    if (value is List) {
+      return value;
+    }
+    return null;
+  }
+
+  /// Check if a variable contains image data
+  bool isImageVariable(String name) {
+    final value = variables[name];
+    return value is List && value.isNotEmpty && value.first is List<int>;
+  }
+
+  /// Get all image variables in the context
+  Map<String, List<dynamic>> getAllImageVariables() {
+    final imageVars = <String, List<dynamic>>{};
+    for (final entry in variables.entries) {
+      if (isImageVariable(entry.key)) {
+        imageVars[entry.key] = entry.value as List<dynamic>;
+      }
+    }
+    return imageVars;
+  }
+
   /// Navigate to a new screen
   void navigateToScreen(String screenId) {
     navigationHistory.add(currentScreenId);
