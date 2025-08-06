@@ -43,7 +43,7 @@ class EnhancedRuntimePage extends HookWidget {
     );
     
     // Initialize component variables helper
-    void initializeComponentVariables(UIComponent component, ExecutionContext context) {
+    void initializeComponentVariables(UIComponent component, ExecutionContext context, ShortcutDefinition shortcut) {
       // Initialize variable if it has binding AND doesn't already exist
       if (component.variableBinding != null) {
         // Check if variable already exists - if so, don't overwrite it
@@ -52,23 +52,39 @@ class EnhancedRuntimePage extends HookWidget {
         }
         
         dynamic defaultValue;
-        switch (component.type) {
-          case ComponentType.textInput:
-          case ComponentType.multilineTextInput:
-            defaultValue = '';
-            break;
-          case ComponentType.numberInput:
-            defaultValue = 0;
-            break;
-          case ComponentType.toggle:
-            defaultValue = false;
-            break;
-          case ComponentType.multiSelect:
-          case ComponentType.tagSelect:
-            defaultValue = [];
-            break;
-          default:
-            defaultValue = null;
+        
+        // First, try to get default value from variable definition
+        final variableDef = shortcut.variables[component.variableBinding];
+        if (variableDef != null && variableDef.defaultValue != null) {
+          defaultValue = variableDef.defaultValue;
+        } else {
+          // Fallback to component type defaults
+          switch (component.type) {
+            case ComponentType.textInput:
+            case ComponentType.multilineTextInput:
+              defaultValue = '';
+              break;
+            case ComponentType.numberInput:
+              defaultValue = 0;
+              break;
+            case ComponentType.slider:
+              // For slider, use min value as default if not defined
+              defaultValue = component.properties['min'] ?? 0;
+              break;
+            case ComponentType.toggle:
+              defaultValue = false;
+              break;
+            case ComponentType.multiSelect:
+            case ComponentType.tagSelect:
+              defaultValue = [];
+              break;
+            case ComponentType.dropdown:
+            case ComponentType.singleSelect:
+              defaultValue = null;
+              break;
+            default:
+              defaultValue = null;
+          }
         }
         context.setVariable(component.variableBinding!, defaultValue);
       }
@@ -82,7 +98,7 @@ class EnhancedRuntimePage extends HookWidget {
             final children = section['children'] as List;
             for (final childJson in children) {
               final childComponent = UIComponent.fromJson(childJson);
-              initializeComponentVariables(childComponent, context);
+              initializeComponentVariables(childComponent, context, shortcut);
             }
           }
         }
@@ -93,7 +109,7 @@ class EnhancedRuntimePage extends HookWidget {
     void initializeVariables(ShortcutDefinition shortcut, ExecutionContext context) {
       for (final screen in shortcut.screens) {
         for (final component in screen.components) {
-          initializeComponentVariables(component, context);
+          initializeComponentVariables(component, context, shortcut);
         }
       }
     }

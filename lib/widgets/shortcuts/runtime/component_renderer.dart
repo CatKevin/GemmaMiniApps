@@ -648,13 +648,38 @@ class _SliderComponent extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final value = useState<double>(0.0);  // Start with default value to avoid content carrying over
-
     final label = component.properties['label'] ?? 'Value';
     final min = (component.properties['min'] as num? ?? 0).toDouble();
     final max = (component.properties['max'] as num? ?? 100).toDouble();
-    final divisions = component.properties['divisions'] as int?;
+    final step = (component.properties['step'] as num? ?? 1).toDouble();
     final showValue = component.properties['showValue'] ?? true;
+    
+    // Calculate divisions from step if not explicitly provided
+    int? divisions = component.properties['divisions'] as int?;
+    if (divisions == null && step > 0) {
+      divisions = ((max - min) / step).round();
+    }
+    
+    // Determine if we should show decimals based on step value
+    final isInteger = step % 1 == 0;
+    final decimalPlaces = isInteger ? 0 : (step < 1 ? 1 : 0);
+    
+    // Get initial value from context or use min as default
+    double initialValue = min;
+    if (component.variableBinding != null) {
+      final contextValue = this.context.getVariable(component.variableBinding!);
+      if (contextValue != null) {
+        initialValue = (contextValue as num).toDouble();
+        // Ensure value is within bounds
+        initialValue = initialValue.clamp(min, max);
+        // Snap to nearest step
+        if (step > 0) {
+          initialValue = ((initialValue - min) / step).round() * step + min;
+        }
+      }
+    }
+    
+    final value = useState<double>(initialValue);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -672,7 +697,9 @@ class _SliderComponent extends HookWidget {
             ),
             if (showValue)
               Text(
-                value.value.toStringAsFixed(1),
+                decimalPlaces == 0 
+                    ? value.value.round().toString()
+                    : value.value.toStringAsFixed(decimalPlaces),
                 style: TextStyle(
                   color: theme.primary,
                   fontSize: 14,
@@ -695,9 +722,16 @@ class _SliderComponent extends HookWidget {
             max: max,
             divisions: divisions,
             onChanged: (newValue) {
+              // Snap to step value
+              if (step > 0) {
+                newValue = ((newValue - min) / step).round() * step + min;
+                newValue = newValue.clamp(min, max);
+              }
               value.value = newValue;
               if (component.variableBinding != null) {
-                onValueChanged(component.variableBinding!, newValue);
+                // Send the properly formatted value (integer or decimal)
+                final outputValue = isInteger ? newValue.round() : newValue;
+                onValueChanged(component.variableBinding!, outputValue);
               }
             },
           ),
@@ -706,14 +740,14 @@ class _SliderComponent extends HookWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              min.toString(),
+              isInteger ? min.round().toString() : min.toStringAsFixed(decimalPlaces),
               style: TextStyle(
                 color: theme.onBackground.withValues(alpha: 0.5),
                 fontSize: 12,
               ),
             ),
             Text(
-              max.toString(),
+              isInteger ? max.round().toString() : max.toStringAsFixed(decimalPlaces),
               style: TextStyle(
                 color: theme.onBackground.withValues(alpha: 0.5),
                 fontSize: 12,
