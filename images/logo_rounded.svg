@@ -1,0 +1,54 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <!-- 极白的拉丝金属质感渐变 -->
+    <linearGradient id="titaniumGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="25%" stop-color="#F8F8F8" />
+      <stop offset="75%" stop-color="#F5F5F5" />
+      <stop offset="100%" stop-color="#F0F0F0" />
+    </linearGradient>
+
+    <!-- 主卡片的圆角形状 -->
+    <rect id="card-shape" x="-35" y="-35" width="70" height="70" rx="16" />
+    <!-- 星形印记 -->
+    <path id="star-mark" d="M 0 -8 L 2.8 -2.8 L 8 0 L 2.8 2.8 L 0 8 L -2.8 2.8 L -8 0 L -2.8 -2.8 Z" />
+
+    <!-- 卡片的悬浮投影滤镜 -->
+    <filter id="cardShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="3" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.25" />
+    </filter>
+
+    <!-- 圆角遮罩 -->
+    <clipPath id="roundedClip">
+      <rect width="200" height="200" rx="40" ry="40" />
+    </clipPath>
+  </defs>
+
+  <!-- 整体圆角遮罩 -->
+  <g clip-path="url(#roundedClip)">
+    <!-- 渐变背景 -->
+    <rect width="200" height="200" fill="url(#backgroundGradient)" />
+    
+    <!-- 深色背景 -->
+    <rect width="200" height="200" fill="#0A0A0A" />
+
+    <!-- "Mini Apps" 卡片矩阵 -->
+    <g>
+      <!-- 后方卡片 -->
+      <g transform="translate(125 70) rotate(12) scale(0.75)" filter="url(#cardShadow)">
+        <use xlink:href="#card-shape" fill="url(#titaniumGradient)" opacity="0.6" />
+      </g>
+      <!-- 中间卡片 -->
+      <g transform="translate(75 130) rotate(-8) scale(0.85)" filter="url(#cardShadow)">
+        <use xlink:href="#card-shape" fill="url(#titaniumGradient)" opacity="0.8" />
+      </g>
+      <!-- 前方主卡片 -->
+      <g transform="translate(100 100)" filter="url(#cardShadow)">
+        <use xlink:href="#card-shape" fill="url(#titaniumGradient)" />
+        <!-- 星形印记，使用深色，有轻微凹陷感 -->
+        <use xlink:href="#star-mark" fill="#444" transform="translate(0, 0) scale(1.5)" />
+        <use xlink:href="#star-mark" fill="#333" transform="translate(-0.3, -0.3) scale(1.5)" />
+      </g>
+    </g>
+  </g>
+</svg>
