@@ -8,8 +8,9 @@
   
   [![Flutter](https://img.shields.io/badge/Flutter-3.32.7+-blue?style=for-the-badge&logo=flutter)](https://flutter.dev)
   [![Dart](https://img.shields.io/badge/Dart-3.8.1+-blue?style=for-the-badge&logo=dart)](https://dart.dev)
-  [![AI](https://img.shields.io/badge/AI-Gemma%203n-orange?style=for-the-badge&logo=brain)](https://ai.google.dev/gemma)
-  [![Mobile](https://img.shields.io/badge/Platform-iOS%20%7C%20Android-green?style=for-the-badge&logo=mobile)](https://flutter.dev)
+  [![AI](https://img.shields.io/badge/AI-Google%20AI%20Edge-orange?style=for-the-badge&logo=google)](https://ai.google.dev/edge)
+  [![Gemma](https://img.shields.io/badge/Model-Gemma%203n-blue?style=for-the-badge&logo=sparkles)](https://ai.google.dev/gemma)
+  [![Mobile](https://img.shields.io/badge/Platform-Android-green?style=for-the-badge&logo=mobile)](https://flutter.dev)
   [![Privacy](https://img.shields.io/badge/Privacy-Local%20AI-red?style=for-the-badge&logo=shield)](https://github.com)
 
 </div>
@@ -43,6 +44,11 @@ Each workflow you create becomes a specialized application:
 - 🎨 **Design Helper**: Generate UI concepts based on user requirements
 - 📚 **Study Buddy**: Create personalized learning materials
 - 🍳 **Recipe Generator**: Custom recipes based on ingredients and preferences
+
+## 🤖 **Powered by Google AI Edge**
+
+**GemmaMiniApps** leverages cutting-edge **Google AI Edge** technology to bring powerful AI capabilities directly to your mobile device. This revolutionary approach ensures complete privacy while delivering instant, high-quality AI responses.
+
 
 ## 🏗️ **Architecture: The Future of AI Interaction**
 
@@ -141,12 +147,12 @@ Each workflow you create becomes a specialized application:
 - **👆 Haptic Feedback**: Native mobile app-like tactile responses
 - **🎯 Intelligent Prompt Assembly**: AI-powered content generation within apps
 
-### 🛡️ **Local Mini App Ecosystem**
-- **📱 100% Local Processing**: Your Mini Apps run entirely on-device
-- **🔒 No Cloud Dependencies**: Apps work offline, protecting user privacy
-- **⚡ Instant App Responses**: No network latency, immediate Mini App feedback
-- **💾 Persistent App Data**: Mini Apps remember user preferences and history
-- **🏪 Personal App Store**: Organize and manage your custom Mini App collection
+### 🛡️ **Google AI Edge Powered Ecosystem**
+- **📱 100% Local Processing**: Your Mini Apps run entirely on-device using Google AI Edge
+- **🔒 No Cloud Dependencies**: Apps work offline, protecting user privacy with edge AI
+- **⚡ Instant App Responses**: No network latency, immediate Mini App feedback via local Gemma
+- **💾 Persistent App Data**: Mini Apps remember user preferences and history locally
+- **🏪 Personal App Store**: Organize and manage your custom AI-powered Mini App collection
 
 ---
 
@@ -255,7 +261,7 @@ fvm flutter build ios
 - [x] 📱 Mobile-optimized responsive design
 - [x] 🔧 Cross-container drag & drop functionality
 - [x] 💬 Chat interface foundation
-- [x] 🤖 Real Gemma AI integration 
+- [x] 🤖 Google AI Edge with Gemma model integration 
 
 ### 🔄 **In Progress**
 - [ ] 🚀 Performance optimizations
@@ -284,7 +290,8 @@ fvm flutter build ios
 ![Hooks](https://img.shields.io/badge/Flutter_Hooks-02569B?style=for-the-badge&logo=react&logoColor=white)
 
 ### **AI & Storage**  
-![Gemma](https://img.shields.io/badge/Gemma_AI-FF6F00?style=for-the-badge&logo=google&logoColor=white)
+![Google AI Edge](https://img.shields.io/badge/Google%20AI%20Edge-4285F4?style=for-the-badge&logo=google&logoColor=white)
+![Gemma](https://img.shields.io/badge/Gemma%20Model-FF6F00?style=for-the-badge&logo=sparkles&logoColor=white)
 ![Local_Storage](https://img.shields.io/badge/Local_Storage-4CAF50?style=for-the-badge&logo=database&logoColor=white)
 
 </div>
@@ -308,11 +315,12 @@ Unlike traditional AI chat apps, GemmaMiniApps creates **functional AI-powered M
 - **Composite App Architecture**: Build complex multi-feature applications with nested logic
 - **Real-time App State Management**: Smart data binding and app variable systems
 - **Progressive App Rendering**: Optimized UI generation for smooth app experiences
+- **Google AI Edge Integration**: Seamless local AI processing with Gemma model
 
 ### 🚀 **Market Differentiation**
 - **No-Code App Development**: Create powerful AI applications without programming knowledge
 - **Infinite App Possibilities**: From simple tools to complex multi-step applications  
-- **Complete Privacy**: Your Mini Apps run entirely on-device, no data leaves your phone
+- **Complete Privacy**: Your Mini Apps run entirely on-device using Google AI Edge, no data leaves your phone
 - **App Store Quality**: Professional-grade Mini Apps with native mobile experience
 
 ### 💡 **The Mini App Ecosystem Vision**
@@ -320,15 +328,6 @@ Unlike traditional AI chat apps, GemmaMiniApps creates **functional AI-powered M
 - **Community Marketplace**: Share and discover Mini Apps created by others
 - **Continuous Evolution**: Apps improve over time with usage and community feedback
 - **Universal Accessibility**: Turn any AI use case into a shareable, reusable Mini App
-
----
-
-## 📝 **Documentation**
-
-- 📋 [HANDOVER.md](HANDOVER.md) - Complete project handoff documentation
-- 🎯 [SHORTCUTS_REQUIREMENTS.md](SHORTCUTS_REQUIREMENTS.md) - Feature specifications
-- 🧠 [CONTEXT.md](CONTEXT.md) - Development context and decisions
-- ⚡ [CLAUDE.md](CLAUDE.md) - Development guidelines and commands
 
 ---
 
@@ -341,12 +340,6 @@ We welcome contributions! Please see our contributing guidelines and feel free t
 3. Commit changes (`git commit -m 'Add AmazingFeature'`)
 4. Push to branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
-
-**Development Principles:**
-- 📚 Documentation-driven development
-- 🎨 UI-first approach  
-- 🛡️ Privacy-focused design
-- 📱 Mobile performance optimization
 
 ---
 
