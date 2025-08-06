@@ -377,15 +377,16 @@ class EnhancedRuntimePage extends HookWidget {
             );
             steps.value = newSteps;
             
-            // Update page controller to handle removed pages
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (pageController.hasClients) {
-                pageController.jumpToPage(currentStepIndex.value - 1);
-              }
-            });
+            // Navigate back to Menu Logic step
+            currentStepIndex.value = currentStepIndex.value - 1;
+            // Use jumpToPage for immediate navigation after removing steps
+            pageController.jumpToPage(currentStepIndex.value);
+            animationController.forward(from: 0);
+            return; // Important: Exit early to avoid double navigation
           }
         }
         
+        // Normal navigation for non-branch steps or within branch steps
         currentStepIndex.value--;
         pageController.previousPage(
           duration: const Duration(milliseconds: 400),
