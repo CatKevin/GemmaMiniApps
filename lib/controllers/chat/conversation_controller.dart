@@ -86,27 +86,30 @@ class ConversationController extends GetxController {
   /// Load or create current conversation
   Future<void> loadOrCreateCurrentConversation() async {
     try {
-      final conversation = await _storageService.getOrCreateDefaultConversation();
-      
-      // Add welcome message if it's a new conversation
-      if (conversation.messages.isEmpty) {
-        conversation.addMessage(Message(
-          text: "Welcome to the future of AI interaction. I'm Gemma, your advanced local assistant.",
-          isUser: false,
-        ));
-        await _storageService.saveConversation(conversation);
+      // Try to get active conversation first
+      final activeId = await _storageService.getActiveConversationId();
+      if (activeId != null) {
+        final conversation = await _storageService.getConversation(activeId);
+        if (conversation != null) {
+          currentConversation.value = conversation;
+          return;
+        }
       }
       
-      currentConversation.value = conversation;
+      // If no active conversation, check if there are any conversations
+      final existingConversations = await _storageService.getConversations(page: 0, pageSize: 1);
+      if (existingConversations.isNotEmpty) {
+        currentConversation.value = existingConversations.first;
+        await _storageService.setActiveConversationId(existingConversations.first.id);
+      } else {
+        // No conversations exist, set to null
+        // Let the UI handle the empty state
+        currentConversation.value = null;
+      }
     } catch (e) {
       print('Error loading current conversation: $e');
-      // Create a new conversation if loading fails
-      final newConversation = Conversation(isActive: true);
-      newConversation.addMessage(Message(
-        text: "Welcome to the future of AI interaction. I'm Gemma, your advanced local assistant.",
-        isUser: false,
-      ));
-      currentConversation.value = newConversation;
+      // Don't create a new conversation on error
+      currentConversation.value = null;
     }
   }
   
@@ -119,8 +122,12 @@ class ConversationController extends GetxController {
         await saveCurrentConversation();
       }
       
-      // Create new conversation
+      // Create new conversation with welcome message
       final newConversation = Conversation(isActive: true);
+      newConversation.addMessage(Message(
+        text: "Welcome to the future of AI interaction. I'm Gemma, your advanced local assistant.",
+        isUser: false,
+      ));
       
       // Save it
       await _storageService.saveConversation(newConversation);
@@ -138,7 +145,12 @@ class ConversationController extends GetxController {
     } catch (e) {
       print('Error creating new conversation: $e');
       final fallback = Conversation(isActive: true);
+      fallback.addMessage(Message(
+        text: "Welcome to the future of AI interaction. I'm Gemma, your advanced local assistant.",
+        isUser: false,
+      ));
       currentConversation.value = fallback;
+      conversations.insert(0, fallback);
       return fallback;
     }
   }
@@ -215,9 +227,18 @@ class ConversationController extends GetxController {
         // Remove from list
         conversations.removeWhere((c) => c.id == id);
         
-        // If deleted conversation was current, create new one
+        // If deleted conversation was current
         if (currentConversation.value?.id == id) {
-          await createNewConversation();
+          // Check if there are other conversations
+          if (conversations.isNotEmpty) {
+            // Switch to the first available conversation
+            await switchConversation(conversations.first);
+          } else {
+            // Only create new if no conversations left
+            currentConversation.value = null;
+            // Don't automatically create a new conversation
+            // Let the UI handle empty state
+          }
         }
       }
       
@@ -235,7 +256,9 @@ class ConversationController extends GetxController {
       
       if (success) {
         conversations.clear();
-        await createNewConversation();
+        currentConversation.value = null;
+        // Don't automatically create a new conversation
+        // Let the UI handle empty state
       }
       
       return success;

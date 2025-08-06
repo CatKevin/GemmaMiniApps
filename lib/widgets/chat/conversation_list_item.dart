@@ -154,7 +154,9 @@ class ConversationListItem extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 6),
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -171,18 +173,20 @@ class ConversationListItem extends StatelessWidget {
                                   color: theme.onBackground.withValues(alpha: 0.4),
                                 ),
                                 const SizedBox(width: 3),
-                                Text(
-                                  conversation.getFormattedTime(),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: theme.onBackground.withValues(alpha: 0.4),
-                                    fontWeight: FontWeight.w500,
+                                Flexible(
+                                  child: Text(
+                                    conversation.getFormattedTime(),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: theme.onBackground.withValues(alpha: 0.4),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
