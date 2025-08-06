@@ -2,27 +2,14 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_zoom_drawer/flutter_zoom_drawer.dart';
 import 'package:get/get.dart';
 import '../../widgets/message_bubble/message_bubble.dart';
 import '../../widgets/chat_input/chat_input.dart';
-import '../../widgets/button_bar/button_bar.dart';
 import '../../core/theme/controllers/theme_controller.dart';
-import '../../core/theme/widgets/theme_switcher.dart';
 import '../../controllers/stack_navigation_controller.dart';
+import '../../controllers/chat/conversation_controller.dart';
 import '../routes.dart';
-
-// Message model
-class Message {
-  final String text;
-  final bool isUser;
-  final DateTime timestamp;
-
-  Message({
-    required this.text,
-    required this.isUser,
-    DateTime? timestamp,
-  }) : timestamp = timestamp ?? DateTime.now();
-}
 
 class ChatPage extends HookWidget {
   const ChatPage({super.key});
@@ -31,6 +18,16 @@ class ChatPage extends HookWidget {
   Widget build(BuildContext context) {
     final themeController = ThemeController.to;
     
+    // Get or initialize ConversationController
+    ConversationController conversationController;
+    try {
+      conversationController = ConversationController.to;
+    } catch (e) {
+      // Initialize if not found
+      Get.put(ConversationController());
+      conversationController = ConversationController.to;
+    }
+    
     // Get Stack Navigation Controller if available
     StackNavigationController? stackNavController;
     try {
@@ -38,21 +35,10 @@ class ChatPage extends HookWidget {
     } catch (e) {
       // Controller not found, running in standalone mode
     }
-    
-    // State management using hooks
-    final messages = useState<List<Message>>([
-      Message(
-        text:
-            "Welcome to the future of AI interaction. I'm Gemma, your advanced local assistant.",
-        isUser: false,
-      ),
-    ]);
 
     final scrollController = useScrollController();
     final isTyping = useState(false);
     final scrollOffset = useState(0.0);
-    final isModelSelected = useState(false);
-    final isMiniAppsSelected = useState(false);
 
     // Animation controllers
     final fadeController = useAnimationController(
@@ -76,25 +62,18 @@ class ChatPage extends HookWidget {
       // Haptic feedback
       HapticFeedback.lightImpact();
 
-      // Add user message
-      messages.value = [
-        ...messages.value,
-        Message(text: text, isUser: true),
-      ];
+      // Add user message to conversation
+      conversationController.addMessage(text, true);
 
       // Simulate AI response
       isTyping.value = true;
       Future.delayed(const Duration(milliseconds: 1500), () {
         HapticFeedback.lightImpact();
         isTyping.value = false;
-        messages.value = [
-          ...messages.value,
-          Message(
-            text:
-                "Processing your request with advanced neural networks. This is a placeholder response showcasing the future of local AI processing.",
-            isUser: false,
-          ),
-        ];
+        conversationController.addMessage(
+          "Processing your request with advanced neural networks. This is a placeholder response showcasing the future of local AI processing.",
+          false,
+        );
       });
     }
     
@@ -148,19 +127,23 @@ class ChatPage extends HookWidget {
 
     // Scroll to bottom when new message is added
     useEffect(() {
-      if (messages.value.isNotEmpty) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (scrollController.hasClients) {
-            scrollController.animateTo(
-              scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeOutQuart,
-            );
-          }
-        });
-      }
+      // Listen to conversation changes
+      ever(conversationController.currentConversation, (_) {
+        final messages = conversationController.currentConversation.value?.messages ?? [];
+        if (messages.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (scrollController.hasClients) {
+              scrollController.animateTo(
+                scrollController.position.maxScrollExtent,
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeOutQuart,
+              );
+            }
+          });
+        }
+      });
       return null;
-    }, [messages.value.length]);
+    }, []);
 
 
     return Scaffold(
@@ -173,6 +156,20 @@ class ChatPage extends HookWidget {
             child: Obx(() {
               final theme = themeController.currentThemeConfig;
               return AppBar(
+                leading: IconButton(
+                  icon: Icon(
+                    Icons.menu,
+                    color: theme.onBackground.withValues(alpha: 0.8),
+                  ),
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    // Try to toggle ZoomDrawer if available
+                    final zoomDrawer = ZoomDrawer.of(context);
+                    if (zoomDrawer != null) {
+                      zoomDrawer.toggle();
+                    }
+                  },
+                ),
                 title: FadeTransition(
                   opacity: fadeController,
                   child: const Text(
@@ -185,10 +182,21 @@ class ChatPage extends HookWidget {
                 ),
                 backgroundColor: Colors.transparent,
                 elevation: 0,
-                actions: const [
+                actions: [
                   Padding(
-                    padding: EdgeInsets.only(right: 16),
-                    child: ThemeSwitcher(),
+                    padding: const EdgeInsets.only(right: 16),
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.add,
+                        color: theme.onBackground.withValues(alpha: 0.8),
+                      ),
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        // Create new conversation and navigate to shortcuts
+                        conversationController.createNewConversation();
+                        Routes.toShortcuts();
+                      },
+                    ),
                   ),
                 ],
                 flexibleSpace: Container(
@@ -216,8 +224,10 @@ class ChatPage extends HookWidget {
           children: [
             // Message list
             Expanded(
-              child: messages.value.isEmpty
-                  ? Center(
+              child: Obx(() {
+                final messages = conversationController.currentConversation.value?.messages ?? [];
+                return messages.isEmpty
+                    ? Center(
                       child: ScaleTransition(
                         scale: CurvedAnimation(
                           parent: scaleController,
@@ -266,20 +276,20 @@ class ChatPage extends HookWidget {
                           ],
                         ),
                       ),
-                    )
-                  : ListView.builder(
-                      controller: scrollController,
-                      padding: EdgeInsets.only(
-                        top: MediaQuery.of(context).padding.top + kToolbarHeight + 20,
-                        left: 16,
-                        right: 16,
-                        bottom: 8,
-                      ),
-                      itemCount:
-                          messages.value.length + (isTyping.value ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        // Show typing indicator
-                        if (isTyping.value && index == messages.value.length) {
+                      )
+                    : ListView.builder(
+                        controller: scrollController,
+                        padding: EdgeInsets.only(
+                          top: MediaQuery.of(context).padding.top + kToolbarHeight + 20,
+                          left: 16,
+                          right: 16,
+                          bottom: 8,
+                        ),
+                        itemCount:
+                            messages.length + (isTyping.value ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          // Show typing indicator
+                          if (isTyping.value && index == messages.length) {
                           return TweenAnimationBuilder<double>(
                             duration: const Duration(milliseconds: 400),
                             tween: Tween(begin: 0.0, end: 1.0),
@@ -295,10 +305,10 @@ class ChatPage extends HookWidget {
                               );
                             },
                           );
-                        }
+                          }
 
-                        final message = messages.value[index];
-                        return TweenAnimationBuilder<double>(
+                          final message = messages[index];
+                          return TweenAnimationBuilder<double>(
                           duration: const Duration(milliseconds: 400),
                           tween: Tween(begin: 0.0, end: 1.0),
                           curve: Curves.easeOutQuart,
@@ -315,31 +325,9 @@ class ChatPage extends HookWidget {
                             );
                           },
                         );
-                      },
-                    ),
-            ),
-            // Button bar for mode selection
-            ModeButtonBar(
-              isModelSelected: isModelSelected.value,
-              isMiniAppsSelected: isMiniAppsSelected.value,
-              onModelToggle: () {
-                isModelSelected.value = !isModelSelected.value;
-                HapticFeedback.selectionClick();
-              },
-              onMiniAppsToggle: () {
-                isMiniAppsSelected.value = !isMiniAppsSelected.value;
-                HapticFeedback.selectionClick();
-                
-                // Navigate to shortcuts when Mini Apps is selected
-                if (isMiniAppsSelected.value) {
-                  Routes.toShortcuts();
-                  // Deselect after navigation
-                  Future.delayed(const Duration(milliseconds: 500), () {
-                    isMiniAppsSelected.value = false;
-                  });
-                }
-              },
-              enabled: !isTyping.value,
+                        },
+                      );
+              }),
             ),
             // Input area with glassmorphic effect
             FadeTransition(

@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 import '../controllers/stack_navigation_controller.dart';
 import '../controllers/shortcuts_navigation_controller.dart';
 import '../core/theme/controllers/theme_controller.dart';
-import 'chat/chat_page.dart';
+import 'chat/chat_drawer_page.dart';
 import 'shortcuts/shortcuts_page.dart';
 import 'shortcuts/enhanced_runtime_page.dart';
 import 'mode_selection/mode_selection_overlay.dart';
@@ -180,7 +180,7 @@ class ChatPageWithStackIntegration extends HookWidget {
     
     return Stack(
       children: [
-        const ChatPage(),
+        ChatDrawerPage(),
         
         // Back to mode selection button
         Positioned(

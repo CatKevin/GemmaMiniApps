@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'main_container.dart';
-import 'chat/chat_page.dart';
+import 'chat/chat_drawer_page.dart';
 import 'shortcuts/shortcuts_page.dart';
 import 'shortcuts/enhanced_runtime_page.dart';
 import 'shortcuts/editor_page.dart';
@@ -96,7 +96,7 @@ class AppPages {
     ),
     GetPage(
       name: Routes.chat,
-      page: () => const ChatPage(),
+      page: () => ChatDrawerPage(),
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 200),
     ),
