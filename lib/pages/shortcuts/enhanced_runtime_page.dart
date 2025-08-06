@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -1214,7 +1215,28 @@ class _ResultView extends HookWidget {
                         try {
                           final stackNavController = Get.find<StackNavigationController>();
                           HapticFeedback.mediumImpact();
-                          stackNavController.sendPromptToChat(prompt);
+                          
+                          // Extract images from execution context
+                          final List<Uint8List> images = [];
+                          final imageVariables = executionContext.getAllImageVariables();
+                          
+                          if (imageVariables.isNotEmpty) {
+                            print('DEBUG: Found ${imageVariables.length} image variables in context');
+                            for (final entry in imageVariables.entries) {
+                              print('DEBUG: Processing image variable: ${entry.key}');
+                              final imageList = entry.value;
+                              for (final imageData in imageList) {
+                                if (imageData is List<int>) {
+                                  images.add(Uint8List.fromList(imageData));
+                                  print('DEBUG: Added image from variable ${entry.key}');
+                                }
+                              }
+                            }
+                            print('DEBUG: Total images to send: ${images.length}');
+                          }
+                          
+                          // Send prompt with images
+                          stackNavController.sendPromptToChat(prompt, images: images);
                         } catch (e) {
                           // If controller not found, show error
                           Get.snackbar(

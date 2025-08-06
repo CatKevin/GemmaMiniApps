@@ -47,40 +47,64 @@ class GemmaService {
     print('🚀 GemmaService.generateResponse called');
     print('📝 Prompt: ${prompt.substring(0, prompt.length.clamp(0, 50))}...');
     
-    _responseController?.close();
+    // Cancel previous subscription and close controller if exists
+    _eventSubscription?.cancel();
+    _eventSubscription = null;
+    
+    // Close previous controller safely
+    if (_responseController != null && !_responseController!.isClosed) {
+      _responseController!.close();
+    }
+    
+    // Create new controller
     _responseController = StreamController<GemmaResponse>.broadcast();
     
-    _eventSubscription?.cancel();
+    // Track if controller has been closed to prevent double closing
+    bool controllerClosed = false;
+    
+    void closeControllerSafely() {
+      if (!controllerClosed && _responseController != null && !_responseController!.isClosed) {
+        controllerClosed = true;
+        _responseController!.close();
+        print('🔒 Stream controller closed safely');
+      }
+    }
+    
     _eventSubscription = _streamChannel.receiveBroadcastStream().listen(
       (dynamic event) {
         print('📨 Native event received: ${event.toString().substring(0, event.toString().length.clamp(0, 100))}...');
-        if (event is Map) {
+        if (!controllerClosed && event is Map) {
           final response = GemmaResponse(
             text: event['text'] ?? '',
             isDone: event['done'] ?? false,
           );
           print('📦 Parsed - Text length: ${response.text.length}, Done: ${response.isDone}');
-          _responseController?.add(response);
+          
+          if (!_responseController!.isClosed) {
+            _responseController!.add(response);
+          }
           
           if (response.isDone) {
             print('✅ Response complete, will close stream controller after delay');
             // Add a small delay before closing to ensure the last message is processed
             Future.delayed(const Duration(milliseconds: 100), () {
-              _responseController?.close();
-              print('🔒 Stream controller closed');
+              closeControllerSafely();
             });
           }
-        } else {
+        } else if (!event is Map) {
           print('⚠️ Event is not a Map: ${event.runtimeType}');
         }
       },
       onError: (error) {
         print('❌ Stream error: $error');
-        _responseController?.addError(error);
-        _responseController?.close();
+        if (!controllerClosed && !_responseController!.isClosed) {
+          _responseController!.addError(error);
+        }
+        closeControllerSafely();
       },
       onDone: () {
         print('🏁 Stream done');
+        closeControllerSafely();
       },
     );
     
@@ -95,8 +119,10 @@ class GemmaService {
       print('✅ Native method call succeeded: $result');
     }).catchError((error) {
       print('❌ Failed to generate response: $error');
-      _responseController?.addError(error);
-      _responseController?.close();
+      if (!controllerClosed && !_responseController!.isClosed) {
+        _responseController!.addError(error);
+      }
+      closeControllerSafely();
     });
     
     return _responseController!.stream;

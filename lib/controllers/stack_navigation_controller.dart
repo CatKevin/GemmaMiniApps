@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'shortcuts_navigation_controller.dart';
@@ -16,8 +17,9 @@ class StackNavigationController extends GetxController {
   late AnimationController shortcutsAnimationController;
   late AnimationController chatAnimationController;
   
-  // Prompt passing
+  // Prompt and images passing
   final RxString pendingPrompt = ''.obs;
+  final RxList<Uint8List> pendingImages = <Uint8List>[].obs;
   final RxBool hasPromptToSend = false.obs;
   
   // Current active layer
@@ -100,10 +102,14 @@ class StackNavigationController extends GetxController {
     currentLayer.value = AppLayer.chat;
   }
   
-  // Send prompt from shortcuts to chat
-  void sendPromptToChat(String prompt) {
-    // Set the prompt
+  // Send prompt from shortcuts to chat with optional images
+  void sendPromptToChat(String prompt, {List<Uint8List>? images}) {
+    // Set the prompt and images
     pendingPrompt.value = prompt;
+    if (images != null && images.isNotEmpty) {
+      pendingImages.value = images;
+      print('DEBUG: StackNavigationController - Setting ${images.length} pending images');
+    }
     
     // Hide shortcuts with animation
     shortcutsAnimationController.reverse().then((_) {
@@ -192,16 +198,19 @@ class StackNavigationController extends GetxController {
     return currentLayer.value != AppLayer.modeSelection;
   }
   
-  // Clear pending prompt after it's been sent
+  // Clear pending prompt and images after they've been sent
   void clearPendingPrompt() {
     pendingPrompt.value = '';
+    pendingImages.clear();
     hasPromptToSend.value = false;
+    print('DEBUG: StackNavigationController - Cleared pending prompt and images');
   }
   
   // Reset to initial state
   void reset() {
     navigationHistory.clear();
     pendingPrompt.value = '';
+    pendingImages.clear();
     hasPromptToSend.value = false;
     backToModeSelection();
   }

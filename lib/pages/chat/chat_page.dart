@@ -66,7 +66,18 @@ class ChatPage extends HookWidget {
     }, []);
     
     // Define sendMessage function before using it
-    void sendMessage(String text) {
+    void sendMessage(String text, {bool fromShortcut = false}) {
+      // If from shortcut, add pending images first
+      if (fromShortcut && stackNavController != null) {
+        final pendingImages = stackNavController!.pendingImages;
+        if (pendingImages.isNotEmpty) {
+          print('DEBUG: ChatPage - Adding ${pendingImages.length} images from shortcut');
+          for (final image in pendingImages) {
+            gemmaController.addImage(image);
+          }
+        }
+      }
+      
       // Check if there's text or images to send
       if (text.trim().isEmpty && gemmaController.selectedImages.isEmpty) return;
 
@@ -90,7 +101,7 @@ class ChatPage extends HookWidget {
             Future.delayed(const Duration(milliseconds: 300), () {
               final prompt = controller.pendingPrompt.value;
               if (prompt.isNotEmpty) {
-                sendMessage(prompt);
+                sendMessage(prompt, fromShortcut: true);
                 controller.clearPendingPrompt();
               }
             });
@@ -102,7 +113,7 @@ class ChatPage extends HookWidget {
           Future.delayed(const Duration(milliseconds: 300), () {
             final prompt = controller.pendingPrompt.value;
             if (prompt.isNotEmpty) {
-              sendMessage(prompt);
+              sendMessage(prompt, fromShortcut: true);
               controller.clearPendingPrompt();
             }
           });
