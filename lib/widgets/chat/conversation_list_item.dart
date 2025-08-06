@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -37,48 +38,99 @@ class ConversationListItem extends StatelessWidget {
             color: Colors.white,
           ),
         ),
-        child: InkWell(
-          onTap: () {
-            HapticFeedback.lightImpact();
-            onTap();
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: isSelected 
-                  ? theme.primary.withValues(alpha: 0.1)
-                  : Colors.transparent,
-              border: Border(
-                left: BorderSide(
-                  color: isSelected 
-                      ? theme.primary 
-                      : Colors.transparent,
-                  width: 3,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              onTap();
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                gradient: isSelected
+                    ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          theme.primary.withValues(alpha: 0.15),
+                          theme.primary.withValues(alpha: 0.08),
+                        ],
+                      )
+                    : LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          theme.surface.withValues(alpha: 0.5),
+                          theme.surface.withValues(alpha: 0.3),
+                        ],
+                      ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected
+                      ? theme.primary.withValues(alpha: 0.3)
+                      : theme.onBackground.withValues(alpha: 0.05),
+                  width: isSelected ? 1.5 : 1,
                 ),
-                bottom: BorderSide(
-                  color: theme.onBackground.withValues(alpha: 0.05),
-                  width: 0.5,
-                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: theme.primary.withValues(alpha: 0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : [
+                        BoxShadow(
+                          color: theme.shadowColor.withValues(alpha: 0.02),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
               ),
-            ),
             child: Row(
               children: [
-                // Conversation icon
+                // Premium conversation icon
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 42,
+                  height: 42,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: theme.surface,
-                    border: Border.all(
-                      color: theme.onBackground.withValues(alpha: 0.1),
-                      width: 1,
-                    ),
+                    gradient: isSelected
+                        ? LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              theme.primary.withValues(alpha: 0.9),
+                              theme.primary.withValues(alpha: 0.7),
+                            ],
+                          )
+                        : LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              theme.surface,
+                              theme.surface.withValues(alpha: 0.8),
+                            ],
+                          ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isSelected
+                            ? theme.primary.withValues(alpha: 0.2)
+                            : theme.shadowColor.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Icon(
-                    Icons.chat_bubble_outline,
+                    isSelected ? Icons.chat_bubble : Icons.chat_bubble_outline,
                     size: 20,
-                    color: theme.onBackground.withValues(alpha: 0.6),
+                    color: isSelected
+                        ? theme.onPrimary
+                        : theme.onBackground.withValues(alpha: 0.6),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -91,41 +143,70 @@ class ConversationListItem extends StatelessWidget {
                       Text(
                         conversation.title,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 15,
                           fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                          color: theme.onBackground,
+                          color: isSelected
+                              ? theme.onBackground
+                              : theme.onBackground.withValues(alpha: 0.9),
+                          letterSpacing: 0.2,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(
-                            Icons.access_time,
-                            size: 12,
-                            color: theme.onBackground.withValues(alpha: 0.4),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            conversation.getFormattedTime(),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.onBackground.withValues(alpha: 0.4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: theme.surface.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.schedule_rounded,
+                                  size: 11,
+                                  color: theme.onBackground.withValues(alpha: 0.4),
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  conversation.getFormattedTime(),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: theme.onBackground.withValues(alpha: 0.4),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Icon(
-                            Icons.message,
-                            size: 12,
-                            color: theme.onBackground.withValues(alpha: 0.4),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${conversation.messages.length}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.onBackground.withValues(alpha: 0.4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: theme.surface.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.forum_rounded,
+                                  size: 11,
+                                  color: theme.onBackground.withValues(alpha: 0.4),
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '${conversation.messages.length}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: theme.onBackground.withValues(alpha: 0.4),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -134,19 +215,31 @@ class ConversationListItem extends StatelessWidget {
                   ),
                 ),
                 
-                // Delete button
-                IconButton(
-                  icon: Icon(
-                    Icons.delete_outline,
-                    size: 20,
-                    color: theme.onBackground.withValues(alpha: 0.3),
+                // Premium delete button
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      _showDeleteConfirmation(context);
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: theme.surface.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.delete_outline_rounded,
+                        size: 18,
+                        color: theme.error.withValues(alpha: 0.6),
+                      ),
+                    ),
                   ),
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    _showDeleteConfirmation(context);
-                  },
                 ),
               ],
+            ),
             ),
           ),
         ),
@@ -159,35 +252,95 @@ class ConversationListItem extends StatelessWidget {
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: theme.surface,
-        title: Text(
-          'Delete Conversation',
-          style: TextStyle(color: theme.onSurface),
-        ),
-        content: Text(
-          'Are you sure you want to delete this conversation? This action cannot be undone.',
-          style: TextStyle(color: theme.onSurface.withValues(alpha: 0.8)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: theme.onSurface.withValues(alpha: 0.6)),
+      barrierDismissible: true,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: AlertDialog(
+          backgroundColor: theme.surface.withValues(alpha: 0.95),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: theme.onSurface.withValues(alpha: 0.1),
+              width: 1,
             ),
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              onDelete();
-            },
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Colors.red),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.error.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.warning_rounded,
+                  color: theme.error,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Delete Conversation',
+                style: TextStyle(
+                  color: theme.onSurface,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to delete this conversation? This action cannot be undone.',
+            style: TextStyle(
+              color: theme.onSurface.withValues(alpha: 0.7),
+              fontSize: 14,
+              height: 1.4,
             ),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              ),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: theme.onSurface.withValues(alpha: 0.6),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    theme.error.withValues(alpha: 0.9),
+                    theme.error.withValues(alpha: 0.7),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  HapticFeedback.mediumImpact();
+                  onDelete();
+                },
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                ),
+                child: const Text(
+                  'Delete',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

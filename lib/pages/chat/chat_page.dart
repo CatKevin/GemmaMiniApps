@@ -9,7 +9,6 @@ import '../../widgets/chat_input/chat_input.dart';
 import '../../core/theme/controllers/theme_controller.dart';
 import '../../controllers/stack_navigation_controller.dart';
 import '../../controllers/chat/conversation_controller.dart';
-import '../routes.dart';
 
 class ChatPage extends HookWidget {
   const ChatPage({super.key});
@@ -192,9 +191,12 @@ class ChatPage extends HookWidget {
                       ),
                       onPressed: () {
                         HapticFeedback.lightImpact();
-                        // Create new conversation and navigate to shortcuts
+                        // Create new conversation and show mode selection
                         conversationController.createNewConversation();
-                        Routes.toShortcuts();
+                        // Show mode selection overlay if stack navigation is available
+                        if (stackNavController != null) {
+                          stackNavController.backToModeSelection();
+                        }
                       },
                     ),
                   ),

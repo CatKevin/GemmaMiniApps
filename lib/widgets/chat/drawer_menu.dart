@@ -10,7 +10,7 @@ import 'conversation_list.dart';
 /// The drawer menu that contains app info and conversation list
 class DrawerMenu extends HookWidget {
   final Function(String)? onConversationSelected;
-  
+
   const DrawerMenu({
     super.key,
     this.onConversationSelected,
@@ -21,106 +21,148 @@ class DrawerMenu extends HookWidget {
     final conversationController = ConversationController.to;
     final searchController = useTextEditingController();
     final isSearching = useState(false);
-    
+
     return Obx(() {
       final theme = ThemeController.to.currentThemeConfig;
-      
-      return Container(
-        color: theme.background,
-        child: SafeArea(
-          child: Column(
-            children: [
-              // App header with glassmorphic effect
+
+      return GestureDetector(
+        onTap: () {
+          // Unfocus search field when tapping outside
+          FocusScope.of(context).unfocus();
+        },
+        child: Container(
+          color: theme.background,
+          child: SafeArea(
+            child: Column(
+              children: [
+              // App header with glassmorphic effect - Horizontal layout
               Container(
-                padding: const EdgeInsets.all(24),
+                height: 100,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      theme.surface,
-                      theme.surface.withValues(alpha: 0.8),
+                      theme.surface.withValues(alpha: 0.95),
+                      theme.surface.withValues(alpha: 0.85),
                     ],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: theme.shadowColor.withValues(alpha: 0.05),
+                      color: theme.primary.withValues(alpha: 0.05),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                    BoxShadow(
+                      color: theme.shadowColor.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-                child: Column(
+                child: Row(
                   children: [
-                    // App icon with glow effect
+                    // Left side: Premium App Icon
                     Container(
-                      width: 60,
-                      height: 60,
+                      width: 65,
+                      height: 65,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
                             theme.primary,
-                            theme.primary.withValues(alpha: 0.8),
+                            theme.primary.withValues(alpha: 0.7),
                           ],
                         ),
+                        borderRadius: BorderRadius.circular(22),
                         boxShadow: [
                           BoxShadow(
-                            color: theme.glowColor.withValues(alpha: 0.3),
-                            blurRadius: 20,
+                            color: theme.primary.withValues(alpha: 0.3),
+                            blurRadius: 25,
                             spreadRadius: -5,
+                            offset: const Offset(0, 8),
+                          ),
+                          BoxShadow(
+                            color: theme.glowColor.withValues(alpha: 0.2),
+                            blurRadius: 15,
+                            spreadRadius: -3,
                           ),
                         ],
                       ),
                       child: Icon(
                         Icons.auto_awesome,
-                        size: 30,
+                        size: 32,
                         color: theme.onPrimary,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    
-                    // App name
-                    Text(
-                      'Gemma Mini Apps',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w300,
-                        letterSpacing: 2,
-                        color: theme.onBackground,
+                    const SizedBox(width: 16),
+
+                    // Right side: App Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // App name with gradient - split into two lines
+                          ShaderMask(
+                            shaderCallback: (bounds) => LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                theme.onBackground,
+                                theme.onBackground.withValues(alpha: 0.9),
+                              ],
+                            ).createShader(bounds),
+                            child: const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Gemma',
+                                  style: TextStyle(
+                                    fontFamily: 'Roboto',
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                    color: Colors.white,
+                                    height: 1.2,
+                                  ),
+                                ),
+                                Text(
+                                  'MiniApps',
+                                  style: TextStyle(
+                                    fontFamily: 'Roboto',
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                    color: Colors.white,
+                                    height: 1.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    
-                    // Statistics
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildStatItem(
-                          icon: Icons.chat_bubble_outline,
-                          value: '${conversationController.conversations.length}',
-                          label: 'Chats',
-                          theme: theme,
-                        ),
-                        const SizedBox(width: 24),
-                        _buildStatItem(
-                          icon: Icons.message_outlined,
-                          value: _getTotalMessages(conversationController),
-                          label: 'Messages',
-                          theme: theme,
-                        ),
-                      ],
                     ),
                   ],
                 ),
               ),
-              
-              // Search bar
+
+              // Premium Search bar with glassmorphic effect
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                 decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      theme.surface.withValues(alpha: 0.5),
+                      theme.background,
+                    ],
+                  ),
                   border: Border(
                     bottom: BorderSide(
                       color: theme.onBackground.withValues(alpha: 0.05),
@@ -128,73 +170,122 @@ class DrawerMenu extends HookWidget {
                     ),
                   ),
                 ),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  height: isSearching.value ? 48 : 40,
-                  decoration: BoxDecoration(
-                    color: theme.surface,
-                    borderRadius: BorderRadius.circular(isSearching.value ? 24 : 20),
-                    border: Border.all(
-                      color: theme.onBackground.withValues(alpha: 
-                        isSearching.value ? 0.2 : 0.1
-                      ),
-                      width: 1,
-                    ),
-                  ),
-                  child: TextField(
-                    controller: searchController,
-                    style: TextStyle(
-                      color: theme.onSurface,
-                      fontSize: 14,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Search conversations...',
-                      hintStyle: TextStyle(
-                        color: theme.onSurface.withValues(alpha: 0.4),
-                      ),
-                      prefixIcon: Icon(
-                        Icons.search,
-                        color: theme.onSurface.withValues(alpha: 0.4),
-                        size: 20,
-                      ),
-                      suffixIcon: isSearching.value ? IconButton(
-                        icon: Icon(
-                          Icons.clear,
-                          color: theme.onSurface.withValues(alpha: 0.4),
-                          size: 20,
+                child: ClipRRect(
+                  borderRadius:
+                      BorderRadius.circular(isSearching.value ? 14 : 12),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            theme.surface.withValues(alpha: 0.9),
+                            theme.surface.withValues(alpha: 0.7),
+                          ],
                         ),
-                        onPressed: () {
-                          searchController.clear();
-                          isSearching.value = false;
-                          conversationController.clearSearch();
-                          HapticFeedback.lightImpact();
+                        borderRadius:
+                            BorderRadius.circular(isSearching.value ? 14 : 12),
+                        border: Border.all(
+                          color: isSearching.value
+                              ? theme.primary.withValues(alpha: 0.3)
+                              : theme.onBackground.withValues(alpha: 0.1),
+                          width: isSearching.value ? 1.5 : 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isSearching.value
+                                ? theme.primary.withValues(alpha: 0.15)
+                                : theme.shadowColor.withValues(alpha: 0.05),
+                            blurRadius: isSearching.value ? 12 : 8,
+                            spreadRadius: -2,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: searchController,
+                        style: TextStyle(
+                          color: theme.onSurface,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Search conversations',
+                          hintStyle: TextStyle(
+                            color: theme.onSurface.withValues(alpha: 0.35),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            letterSpacing: 0.5,
+                          ),
+                          prefixIcon: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.all(10),
+                            child: Icon(
+                              isSearching.value
+                                  ? Icons.search_rounded
+                                  : Icons.search,
+                              color: isSearching.value
+                                  ? theme.primary
+                                  : theme.onSurface.withValues(alpha: 0.4),
+                              size: 20,
+                            ),
+                          ),
+                          suffixIcon: isSearching.value
+                              ? IconButton(
+                                  icon: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: theme.onSurface
+                                          .withValues(alpha: 0.05),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.clear_rounded,
+                                      color: theme.onSurface
+                                          .withValues(alpha: 0.5),
+                                      size: 16,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    searchController.clear();
+                                    isSearching.value = false;
+                                    conversationController.clearSearch();
+                                    HapticFeedback.lightImpact();
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                        onChanged: (value) {
+                          isSearching.value = value.isNotEmpty;
+                          conversationController.searchConversations(value);
                         },
-                      ) : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
                       ),
                     ),
-                    onChanged: (value) {
-                      isSearching.value = value.isNotEmpty;
-                      conversationController.searchConversations(value);
-                    },
                   ),
                 ),
               ),
-              
+
               // Section header
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
                 child: Row(
                   children: [
                     Text(
                       'Conversations',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        letterSpacing: 1,
+                        letterSpacing: 1.2,
                         color: theme.onBackground.withValues(alpha: 0.5),
                       ),
                     ),
@@ -216,7 +307,7 @@ class DrawerMenu extends HookWidget {
                   ],
                 ),
               ),
-              
+
               // Conversation list
               Expanded(
                 child: ConversationList(
@@ -226,60 +317,14 @@ class DrawerMenu extends HookWidget {
             ],
           ),
         ),
-      );
+      ),
+    );
     });
   }
-  
-  Widget _buildStatItem({
-    required IconData icon,
-    required String value,
-    required String label,
-    required dynamic theme,
-  }) {
-    return Column(
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: theme.onBackground.withValues(alpha: 0.6),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: theme.onBackground,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: theme.onBackground.withValues(alpha: 0.4),
-          ),
-        ),
-      ],
-    );
-  }
-  
-  String _getTotalMessages(ConversationController controller) {
-    int total = 0;
-    for (final conversation in controller.conversations) {
-      total += conversation.messages.length;
-    }
-    return total.toString();
-  }
-  
+
   void _showClearAllDialog(BuildContext context) {
     final theme = ThemeController.to.currentThemeConfig;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

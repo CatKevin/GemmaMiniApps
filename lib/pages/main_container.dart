@@ -178,27 +178,7 @@ class ChatPageWithStackIntegration extends HookWidget {
       return null;
     }, [stackNavController.hasPromptToSend.value]);
     
-    return Stack(
-      children: [
-        ChatDrawerPage(),
-        
-        // Back to mode selection button
-        Positioned(
-          top: MediaQuery.of(context).padding.top + 8,
-          left: 8,
-          child: IconButton(
-            icon: Icon(
-              Icons.grid_view_rounded,
-              color: ThemeController.to.currentThemeConfig.onBackground,
-            ),
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              stackNavController.backToModeSelection();
-            },
-          ),
-        ),
-      ],
-    );
+    return ChatDrawerPage();
   }
 }
 

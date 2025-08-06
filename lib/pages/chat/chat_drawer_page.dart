@@ -9,7 +9,7 @@ import 'chat_page.dart';
 /// Chat page wrapped with zoom drawer for conversation management
 class ChatDrawerPage extends StatelessWidget {
   ChatDrawerPage({super.key});
-  
+
   final _drawerController = ZoomDrawerController();
 
   @override
@@ -18,10 +18,10 @@ class ChatDrawerPage extends StatelessWidget {
     if (!Get.isRegistered<ConversationController>()) {
       Get.put(ConversationController());
     }
-    
+
     return Obx(() {
       final theme = ThemeController.to.currentThemeConfig;
-      
+
       return ZoomDrawer(
         controller: _drawerController,
         menuScreen: DrawerMenu(
@@ -31,17 +31,19 @@ class ChatDrawerPage extends StatelessWidget {
           },
         ),
         mainScreen: const ChatPageWithDrawer(),
-        borderRadius: 24.0,
+        borderRadius: 20.0,
         showShadow: true,
-        angle: -12.0,
-        menuBackgroundColor: theme.background,
+        angle: 0.0, // No tilt for premium look
+        menuBackgroundColor: theme.surface.withValues(alpha: 0.45),
+        // menuBackgroundColor: theme.surface.withValues(alpha: 0.98),
         slideWidth: MediaQuery.of(context).size.width * 0.75,
-        mainScreenScale: 0.2,
+        mainScreenScale: 0.15, // Subtle scale effect
         mainScreenTapClose: true,
         menuScreenTapClose: true,
-        drawerShadowsBackgroundColor: theme.shadowColor.withValues(alpha: 0.3),
-        shadowLayer1Color: theme.shadowColor.withValues(alpha: 0.1),
-        shadowLayer2Color: theme.shadowColor.withValues(alpha: 0.05),
+        drawerShadowsBackgroundColor: Colors.white.withValues(alpha: 0.9),
+        shadowLayer1Color: Colors.white.withValues(alpha: 0.25),
+        shadowLayer2Color: Colors.white.withValues(alpha: 0.18),
+        overlayBlur: 1.0,
       );
     });
   }
