@@ -19,7 +19,16 @@ class DrawerMenu extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final conversationController = ConversationController.to;
+    // Safe controller access with fallback initialization
+    late final ConversationController conversationController;
+    try {
+      conversationController = ConversationController.to;
+    } catch (e) {
+      print('DEBUG: ConversationController not found, initializing...');
+      Get.put(ConversationController());
+      conversationController = ConversationController.to;
+    }
+    
     final searchController = useTextEditingController();
     final isSearching = useState(false);
 

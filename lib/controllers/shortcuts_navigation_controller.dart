@@ -12,12 +12,21 @@ class ShortcutsNavigationController extends GetxController {
   
   // Navigate to runtime page
   void navigateToRuntime(String shortcutId) {
+    print('DEBUG ShortcutsNavController: Navigating to runtime with ID: $shortcutId');
     runtimeShortcutId.value = shortcutId;
     currentPage.value = 'runtime';
   }
   
   // Navigate back to list
   void navigateToList() {
+    print('DEBUG ShortcutsNavController: Navigating back to list, clearing runtime state');
+    currentPage.value = 'list';
+    runtimeShortcutId.value = null;
+  }
+  
+  // Reset all state (for cleanup)
+  void resetState() {
+    print('DEBUG ShortcutsNavController: Resetting all navigation state');
     currentPage.value = 'list';
     runtimeShortcutId.value = null;
   }

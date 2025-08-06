@@ -5,6 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import '../../controllers/stack_navigation_controller.dart';
 import '../../core/theme/controllers/theme_controller.dart';
+import '../../services/gemma/model_manager_service.dart';
+import '../../widgets/model_initialization_dialog.dart';
+import '../../widgets/model_load_prompt_dialog.dart';
 
 /// Premium mode selection overlay with enhanced visual design
 class ModeSelectionOverlay extends HookWidget {
@@ -146,8 +149,28 @@ class ModeSelectionOverlay extends HookWidget {
                                       icon: Icons.dashboard_customize,
                                       isPrimary: true,
                                       animationDelay: 0,
-                                      onTap: () {
+                                      onTap: () async {
                                         HapticFeedback.mediumImpact();
+                                        
+                                        // Check if model is initialized
+                                        final modelManager = ModelManagerService();
+                                        if (!modelManager.hasAnyModelAvailable()) {
+                                          await ModelInitializationDialog.show(
+                                            title: 'Model Required',
+                                            message: 'Mini Apps require an AI model to be initialized. Please download or import a model to continue.',
+                                          );
+                                          return;
+                                        }
+                                        
+                                        // Check if model is loaded/running
+                                        if (!modelManager.isModelLoaded()) {
+                                          await ModelLoadPromptDialog.show(
+                                            title: 'Model Not Running',
+                                            message: 'Mini Apps require a model to be running. Please select and load a model to continue.',
+                                          );
+                                          return;
+                                        }
+                                        
                                         stackNavController.showMiniApps();
                                       },
                                     ),
@@ -176,8 +199,28 @@ class ModeSelectionOverlay extends HookWidget {
                                       icon: Icons.auto_awesome,
                                       isPrimary: false,
                                       animationDelay: 100,
-                                      onTap: () {
+                                      onTap: () async {
                                         HapticFeedback.mediumImpact();
+                                        
+                                        // Check if model is initialized
+                                        final modelManager = ModelManagerService();
+                                        if (!modelManager.hasAnyModelAvailable()) {
+                                          await ModelInitializationDialog.show(
+                                            title: 'Model Required',
+                                            message: 'Chat requires an AI model to be initialized. Please download or import a model to continue.',
+                                          );
+                                          return;
+                                        }
+                                        
+                                        // Check if model is loaded/running
+                                        if (!modelManager.isModelLoaded()) {
+                                          await ModelLoadPromptDialog.show(
+                                            title: 'Model Not Running', 
+                                            message: 'Chat requires a model to be running. Please select and load a model to continue.',
+                                          );
+                                          return;
+                                        }
+                                        
                                         stackNavController.showChat();
                                       },
                                     ),

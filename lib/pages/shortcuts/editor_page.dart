@@ -6,6 +6,8 @@ import 'package:collection/collection.dart';
 import '../../core/theme/controllers/theme_controller.dart';
 import '../../models/shortcuts/models.dart';
 import '../../controllers/shortcuts/editor_controller.dart';
+import '../../controllers/shortcuts_navigation_controller.dart';
+import '../../controllers/stack_navigation_controller.dart';
 import '../../widgets/shortcuts/editor/variable_definition_section.dart';
 import '../../widgets/shortcuts/editor/draggable_component_card.dart';
 import '../../widgets/shortcuts/editor/composite_component_widget.dart';
@@ -247,8 +249,36 @@ class EditorPage extends HookWidget {
       );
 
       if (success) {
-        // Navigate back to shortcuts list page
-        Get.until((route) => route.settings.name == Routes.shortcuts);
+        print('DEBUG: Shortcut saved successfully, navigating back to list');
+        
+        // Navigate back to shortcuts list
+        // Since the flow is: list -> basic info -> editor, we need to clear the navigation stack
+        
+        try {
+          // Get the shortcuts navigation controller
+          final shortcutsNavController = Get.find<ShortcutsNavigationController>();
+          
+          // Reset to list page
+          shortcutsNavController.navigateToList();
+          print('DEBUG: Reset shortcuts navigation to list');
+          
+          // Ensure shortcuts are visible
+          final stackNavController = Get.find<StackNavigationController>();
+          if (!stackNavController.isShortcutsVisible.value) {
+            print('DEBUG: Shortcuts not visible, showing mini apps');
+            stackNavController.showMiniApps();
+          }
+          
+          // Clear all routes and return to initial route (MainContainer)
+          // This ensures both editor and basic info pages are removed from stack
+          print('DEBUG: Clearing navigation stack and returning to main');
+          Get.offAllNamed(Routes.initial);
+        } catch (e) {
+          print('ERROR: Failed to navigate properly, using fallback: $e');
+          // Fallback: try to go back twice to reach the list
+          Get.back(); // Close editor
+          Get.back(); // Close basic info
+        }
         
         Get.snackbar(
           'Success',
@@ -262,7 +292,20 @@ class EditorPage extends HookWidget {
               // Navigate to the newly created shortcut's runtime
               final newShortcutId = controller.session.value?.shortcutId;
               if (newShortcutId != null) {
-                Routes.toShortcutsRuntime(shortcutId: newShortcutId);
+                // Use shortcuts navigation controller for runtime navigation
+                try {
+                  final shortcutsNavController = Get.find<ShortcutsNavigationController>();
+                  shortcutsNavController.navigateToRuntime(newShortcutId);
+                  
+                  // Make sure we're showing shortcuts if not already visible
+                  final stackNavController = Get.find<StackNavigationController>();
+                  if (!stackNavController.isShortcutsVisible.value) {
+                    stackNavController.showMiniApps();
+                  }
+                } catch (e) {
+                  print('Error navigating to runtime: $e');
+                  Routes.toShortcutsRuntime(shortcutId: newShortcutId);
+                }
               }
             },
             child: Text(

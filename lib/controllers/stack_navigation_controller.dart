@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'shortcuts_navigation_controller.dart';
 
 /// Controller for managing Stack-based navigation between different app modes
 class StackNavigationController extends GetxController {
@@ -44,12 +45,28 @@ class StackNavigationController extends GetxController {
   
   // Show Mini Apps (shortcuts)
   void showMiniApps() {
-    navigationHistory.add(currentLayer.value);
+    // Only add to history if we're actually changing layers
+    if (currentLayer.value != AppLayer.shortcuts) {
+      navigationHistory.add(currentLayer.value);
+    }
     
-    // Hide mode selection with fade out
-    modeSelectionAnimationController.reverse().then((_) {
-      isModeSelectionVisible.value = false;
-    });
+    // Always reset shortcuts navigation to list page when showing miniApps
+    // This ensures we never show the runtime page when user expects the list
+    try {
+      final shortcutsNavController = Get.find<ShortcutsNavigationController>();
+      // Force reset to list, clearing any runtime state
+      shortcutsNavController.resetState();
+      print('DEBUG: Force reset shortcuts to list page when showing miniApps');
+    } catch (e) {
+      print('DEBUG: ShortcutsNavigationController not found, skipping reset: $e');
+    }
+    
+    // Hide mode selection with fade out if visible
+    if (isModeSelectionVisible.value) {
+      modeSelectionAnimationController.reverse().then((_) {
+        isModeSelectionVisible.value = false;
+      });
+    }
     
     // Show shortcuts with fade in
     isShortcutsVisible.value = true;
@@ -109,6 +126,16 @@ class StackNavigationController extends GetxController {
   // Go back to mode selection
   void backToModeSelection() {
     navigationHistory.clear();
+    
+    // Always reset shortcuts state when returning to mode selection
+    // This ensures clean state when user creates new conversation from any context
+    try {
+      final shortcutsNavController = Get.find<ShortcutsNavigationController>();
+      shortcutsNavController.resetState();
+      print('DEBUG: Reset shortcuts state when returning to mode selection');
+    } catch (e) {
+      print('DEBUG: ShortcutsNavigationController not found: $e');
+    }
     
     // Hide all layers
     if (isShortcutsVisible.value) {

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../services/gemma/gemma_service.dart';
 import '../../services/gemma/model_manager_service.dart';
@@ -53,7 +54,51 @@ class GemmaChatController extends GetxController {
   
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty && selectedImages.isEmpty) return;
-    if (!isModelReady.value || isGenerating.value) return;
+    
+    // Check if model is available and loaded before proceeding
+    final modelManager = ModelManagerService();
+    
+    // First check if any model is available
+    if (!modelManager.hasAnyModelAvailable()) {
+      // Show model initialization dialog
+      Get.snackbar(
+        'Model Not Initialized',
+        'Please download or import a model first to use chat features.',
+        backgroundColor: Get.theme.colorScheme.error,
+        colorText: Get.theme.colorScheme.onError,
+        duration: const Duration(seconds: 4),
+        mainButton: TextButton(
+          onPressed: () {
+            Get.closeCurrentSnackbar();
+            Get.toNamed('/model-management');
+          },
+          child: const Text('Manage Models'),
+        ),
+      );
+      return;
+    }
+    
+    // Then check if model is loaded/running
+    if (!modelManager.isModelLoaded() || !isModelReady.value) {
+      // Show model load prompt
+      Get.snackbar(
+        'Model Not Running',
+        'Please select and load a model first to use chat features.',
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+        mainButton: TextButton(
+          onPressed: () {
+            Get.closeCurrentSnackbar();
+            Get.toNamed('/model-management');
+          },
+          child: const Text('Select Model', style: TextStyle(color: Colors.white)),
+        ),
+      );
+      return;
+    }
+    
+    if (isGenerating.value) return;
     
     print('DEBUG: Starting sendMessage with text: "$text" and ${selectedImages.length} images');
     

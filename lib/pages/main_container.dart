@@ -4,6 +4,8 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:get/get.dart';
 import '../controllers/stack_navigation_controller.dart';
 import '../controllers/shortcuts_navigation_controller.dart';
+import '../controllers/chat/conversation_controller.dart';
+import '../services/gemma/model_manager_service.dart';
 import '../core/theme/controllers/theme_controller.dart';
 import 'chat/chat_drawer_page.dart';
 import 'shortcuts/shortcuts_page.dart';
@@ -23,6 +25,16 @@ class MainContainer extends HookWidget {
     
     // Initialize shortcuts navigation controller here to avoid recreation
     Get.put(ShortcutsNavigationController(), permanent: true);
+    
+    // Initialize ConversationController early to ensure it's always available
+    Get.put(ConversationController(), permanent: true);
+    
+    // Initialize ModelManagerService to load model status
+    final modelManager = ModelManagerService();
+    useEffect(() {
+      modelManager.initialize();
+      return null;
+    }, const []);
     
     // Animation controllers - use keys to ensure stability
     final modeSelectionAnimController = useAnimationController(
@@ -50,6 +62,14 @@ class MainContainer extends HookWidget {
         shortcuts: shortcutsAnimController,
         chat: chatAnimController,
       );
+      
+      // Check if we need to show shortcuts (e.g., after saving a new shortcut)
+      // This happens when navigating back via offAllNamed
+      if (stackNavController.isShortcutsVisible.value) {
+        print('DEBUG: MainContainer init - shortcuts should be visible');
+        shortcutsAnimController.value = 1.0; // Ensure shortcuts are fully visible
+      }
+      
       return null;
     }, []);
     
@@ -196,6 +216,8 @@ class ShortcutsStackWrapper extends HookWidget {
     return Obx(() {
       final currentPage = shortcutsNavController.currentPage.value;
       final shortcutId = shortcutsNavController.runtimeShortcutId.value;
+      
+      print('DEBUG ShortcutsStackWrapper: currentPage=$currentPage, shortcutId=$shortcutId');
       
       return Stack(
         children: [

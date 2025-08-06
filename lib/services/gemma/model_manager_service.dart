@@ -41,6 +41,52 @@ class ModelManagerService extends ChangeNotifier {
     final status = _modelStatus[modelId];
     return status?.downloadStatus == ModelDownloadStatus.downloading;
   }
+  
+  /// Check if any model is available (downloaded or imported)
+  bool hasAnyModelAvailable() {
+    // Check imported models first
+    final importedModels = ModelRegistry.getImportedModels();
+    if (importedModels.isNotEmpty) {
+      return true;
+    }
+    
+    // Check downloaded models
+    for (final entry in _modelStatus.entries) {
+      if (entry.value.downloadStatus == ModelDownloadStatus.downloaded) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  /// Get the first available model ID
+  String? getFirstAvailableModelId() {
+    // Prefer imported models
+    final importedModels = ModelRegistry.getImportedModels();
+    if (importedModels.isNotEmpty) {
+      return importedModels.first.id;
+    }
+    
+    // Then check downloaded models
+    for (final entry in _modelStatus.entries) {
+      if (entry.value.downloadStatus == ModelDownloadStatus.downloaded) {
+        return entry.key;
+      }
+    }
+    
+    return null;
+  }
+  
+  /// Check if any model is currently loaded/running
+  bool isModelLoaded() {
+    return _selectedModelId != null;
+  }
+  
+  /// Check if a specific model is loaded
+  bool isSpecificModelLoaded(String modelId) {
+    return _selectedModelId == modelId;
+  }
 
   /// Initialize the service and load saved state
   Future<void> initialize() async {

@@ -8,6 +8,11 @@ import '../../services/shortcuts/prompt_builder.dart';
 import '../../services/shortcuts/mock_ai_service.dart';
 import '../../services/shortcuts/storage_service.dart';
 import '../../controllers/chat/gemma_chat_controller.dart';
+import '../../controllers/shortcuts_navigation_controller.dart';
+import '../../controllers/stack_navigation_controller.dart';
+import '../../services/gemma/model_manager_service.dart';
+import '../../widgets/model_initialization_dialog.dart';
+import '../../widgets/model_load_prompt_dialog.dart';
 
 class RuntimePage extends HookWidget {
   const RuntimePage({super.key});
@@ -91,8 +96,23 @@ class RuntimePage extends HookWidget {
       // Send the message with images
       gemmaController.sendMessage(result.text);
       
-      // Navigate back to chat to show the message
-      Get.back(); // Close the runtime page
+      // Reset shortcuts navigation state before navigating to chat
+      try {
+        final shortcutsNavController = Get.find<ShortcutsNavigationController>();
+        shortcutsNavController.navigateToList(); // Reset to list page
+        print('DEBUG: Reset shortcuts navigation to list after sending to chat');
+      } catch (e) {
+        print('DEBUG: Failed to reset shortcuts navigation: $e');
+      }
+      
+      // Navigate to chat using stack navigation
+      try {
+        final stackNavController = Get.find<StackNavigationController>();
+        stackNavController.showChat();
+      } catch (e) {
+        print('Error navigating to chat: $e');
+        Get.back(); // Fallback to simple back navigation
+      }
       
     } catch (e) {
       print('Error sending to chat: $e');
@@ -154,6 +174,27 @@ class RuntimePage extends HookWidget {
     
     void handleAction(ScreenAction action) {
       if (action.type == ActionType.submit) {
+        // Check if model is initialized before proceeding
+        final modelManager = ModelManagerService();
+        
+        // First check if any model is available
+        if (!modelManager.hasAnyModelAvailable()) {
+          ModelInitializationDialog.show(
+            title: 'Model Required',
+            message: 'Shortcuts require an AI model to generate prompts. Please download or import a model to continue.',
+          );
+          return;
+        }
+        
+        // Then check if model is loaded/running
+        if (!modelManager.isModelLoaded()) {
+          ModelLoadPromptDialog.show(
+            title: 'Model Not Running',
+            message: 'Shortcuts require a model to be running. Please select and load a model to continue.',
+          );
+          return;
+        }
+        
         // Generate prompt and show result
         isLoading.value = true;
         
@@ -249,7 +290,17 @@ class RuntimePage extends HookWidget {
         title: Text(shortcut.value!.name.toUpperCase()),
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => Get.back(),
+          onPressed: () {
+            // Reset shortcuts navigation to list when closing runtime
+            try {
+              final shortcutsNavController = Get.find<ShortcutsNavigationController>();
+              shortcutsNavController.navigateToList();
+              print('DEBUG: Reset shortcuts navigation to list on close');
+            } catch (e) {
+              print('DEBUG: Failed to reset shortcuts navigation: $e');
+              Get.back();
+            }
+          },
         ),
       ),
       body: Obx(() {

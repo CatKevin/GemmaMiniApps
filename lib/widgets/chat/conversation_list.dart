@@ -20,7 +20,16 @@ class ConversationList extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final conversationController = ConversationController.to;
+    // Safe controller access with fallback initialization
+    late final ConversationController conversationController;
+    try {
+      conversationController = ConversationController.to;
+    } catch (e) {
+      print('DEBUG: ConversationController not found in ConversationList, initializing...');
+      Get.put(ConversationController());
+      conversationController = ConversationController.to;
+    }
+    
     final scrollController = useScrollController();
     final isLoadingMore = useState(false);
 

@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import '../../models/chat/conversation.dart';
 import '../../services/chat/conversation_storage_service.dart';
+import '../shortcuts_navigation_controller.dart';
 
 /// Controller for managing chat conversations
 class ConversationController extends GetxController {
@@ -120,6 +121,16 @@ class ConversationController extends GetxController {
       if (currentConversation.value != null && 
           currentConversation.value!.messages.isNotEmpty) {
         await saveCurrentConversation();
+      }
+      
+      // Reset shortcuts navigation to ensure clean state
+      // This prevents showing runtime page when user expects list
+      try {
+        final shortcutsNavController = Get.find<ShortcutsNavigationController>();
+        shortcutsNavController.resetState();
+        print('DEBUG: Reset shortcuts state when creating new conversation');
+      } catch (e) {
+        // Shortcuts controller may not be initialized, which is fine
       }
       
       // Create new conversation with welcome message
