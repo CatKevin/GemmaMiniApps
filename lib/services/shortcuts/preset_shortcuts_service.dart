@@ -43,6 +43,13 @@ class PresetShortcutsService {
         defaultValue: 'professional',
         description: 'Writing tone',
       ),
+      'writingGuidelines': VariableDefinition(
+        name: 'writingGuidelines',
+        type: VariableType.string,
+        defaultValue: '',
+        description: 'Generated writing guidelines',
+      ),
+      // Blog Post specific
       'keywords': VariableDefinition(
         name: 'keywords',
         type: VariableType.string,
@@ -55,11 +62,44 @@ class PresetShortcutsService {
         defaultValue: '',
         description: 'Target audience',
       ),
-      'writingGuidelines': VariableDefinition(
-        name: 'writingGuidelines',
+      // News Article specific
+      'urgency': VariableDefinition(
+        name: 'urgency',
+        type: VariableType.number,
+        defaultValue: 5,
+        description: 'News urgency level',
+      ),
+      'source': VariableDefinition(
+        name: 'source',
         type: VariableType.string,
         defaultValue: '',
-        description: 'Generated writing guidelines',
+        description: 'News source',
+      ),
+      // Technical Documentation specific
+      'techDepth': VariableDefinition(
+        name: 'techDepth',
+        type: VariableType.string,
+        defaultValue: '',
+        description: 'Technical depth level',
+      ),
+      'includeCode': VariableDefinition(
+        name: 'includeCode',
+        type: VariableType.boolean,
+        defaultValue: false,
+        description: 'Include code examples',
+      ),
+      // Creative Story specific
+      'genre': VariableDefinition(
+        name: 'genre',
+        type: VariableType.string,
+        defaultValue: '',
+        description: 'Story genre',
+      ),
+      'wordCount': VariableDefinition(
+        name: 'wordCount',
+        type: VariableType.number,
+        defaultValue: 1000,
+        description: 'Target word count',
       ),
     };
 
@@ -283,7 +323,7 @@ class PresetShortcutsService {
         id: 'guidelines_text',
         type: ComponentType.text,
         properties: {
-          'content': 'Based on your selections, I will create {{articleType}} about {{topic}} with a {{tone}} tone.',
+          'content': 'Based on your selections, I will create {{articleType}} about {{topic}} with a {{tone}} tone.{{#if keywords}} Keywords: {{keywords}}.{{/if}}{{#if targetAudience}} Target audience: {{targetAudience}}.{{/if}}{{#if urgency}} Urgency level: {{urgency}}/10.{{/if}}{{#if source}} Source: {{source}}.{{/if}}{{#if techDepth}} Technical depth: {{techDepth}}.{{/if}}{{#if includeCode}} Code examples will be included.{{/if}}{{#if genre}} Genre: {{genre}}.{{/if}}{{#if wordCount}} Target length: {{wordCount}} words.{{/if}}',
           'outputVariable': 'writingGuidelines',
         },
       ),
@@ -292,7 +332,7 @@ class PresetShortcutsService {
         id: 'final_prompt',
         type: ComponentType.finalPromptBuilder,
         properties: {
-          'promptTemplate': 'Write a {{tone}} {{articleType}} about "{{topic}}".\n\nWriting Guidelines:\n{{writingGuidelines}}\n\nAdditional requirements:\n- Make it engaging and informative\n- Use clear and concise language\n- Include relevant examples where appropriate',
+          'promptTemplate': 'Write a {{tone}} {{articleType}} about "{{topic}}".\n\nWriting Guidelines:\n{{writingGuidelines}}\n\n{{#if articleType == "Blog Post"}}SEO Requirements:\n- Keywords to include: {{keywords}}\n- Target audience: {{targetAudience}}\n- Optimize for search engines while maintaining readability\n{{/if}}{{#if articleType == "News Article"}}News Requirements:\n- Urgency level: {{urgency}}/10\n- Information source: {{source}}\n- Follow journalistic standards and inverted pyramid structure\n{{/if}}{{#if articleType == "Technical Documentation"}}Technical Requirements:\n- Technical depth: {{techDepth}}\n- Include code examples: {{includeCode}}\n- Use clear technical terminology and structure\n{{/if}}{{#if articleType == "Creative Story"}}Story Requirements:\n- Genre: {{genre}}\n- Target word count: {{wordCount}} words\n- Include compelling narrative and character development\n{{/if}}\nAdditional requirements:\n- Make it engaging and informative\n- Use clear and concise language\n- Include relevant examples where appropriate',
         },
       ),
     ];
@@ -791,6 +831,46 @@ class PresetShortcutsService {
         defaultValue: '',
         description: 'Learning difficulty assessment',
       ),
+      // Programming specific
+      'programmingLanguage': VariableDefinition(
+        name: 'programmingLanguage',
+        type: VariableType.string,
+        defaultValue: '',
+        description: 'Programming language to learn',
+      ),
+      'projectType': VariableDefinition(
+        name: 'projectType',
+        type: VariableType.string,
+        defaultValue: '',
+        description: 'Type of project to build',
+      ),
+      // Language Learning specific
+      'targetLanguage': VariableDefinition(
+        name: 'targetLanguage',
+        type: VariableType.string,
+        defaultValue: '',
+        description: 'Language to learn',
+      ),
+      'languageGoal': VariableDefinition(
+        name: 'languageGoal',
+        type: VariableType.string,
+        defaultValue: '',
+        description: 'Purpose of learning the language',
+      ),
+      // Design specific
+      'designTools': VariableDefinition(
+        name: 'designTools',
+        type: VariableType.list,
+        defaultValue: [],
+        description: 'Design tools to learn',
+      ),
+      // Music specific
+      'instrument': VariableDefinition(
+        name: 'instrument',
+        type: VariableType.string,
+        defaultValue: '',
+        description: 'Musical instrument to learn',
+      ),
     };
 
     final components = [
@@ -1069,7 +1149,7 @@ class PresetShortcutsService {
         id: 'final_prompt_4',
         type: ComponentType.finalPromptBuilder,
         properties: {
-          'promptTemplate': 'Create a personalized {{timeAvailable}}-day learning plan for:\n\nSubject: {{subject}}\nCurrent Level: {{currentLevel}}\nTarget Level: {{targetLevel}}\n\nAssessment: {{difficulty}}\n\nPreferred Learning Styles: {{learningStyle}}\nStart Date: {{startDate}}\n\nPlease include:\n- Weekly milestones\n- Recommended resources\n- Practice exercises\n- Progress checkpoints\n- Time management tips',
+          'promptTemplate': 'Create a personalized {{timeAvailable}}-day learning plan for:\n\nSubject: {{subject}}\n{{#if subject == "Programming"}}Programming Language: {{programmingLanguage}}\nProject Type: {{projectType}}\n{{/if}}{{#if subject == "Language Learning"}}Target Language: {{targetLanguage}}\nLearning Goal: {{languageGoal}}\n{{/if}}{{#if subject == "Design"}}Design Tools to Learn: {{designTools}}\n{{/if}}{{#if subject == "Music"}}Instrument: {{instrument}}\n{{/if}}Current Level: {{currentLevel}}\nTarget Level: {{targetLevel}}\n\nAssessment: {{difficulty}}\n\nPreferred Learning Styles: {{learningStyle}}\nStart Date: {{startDate}}\n\nPlease include:\n- Weekly milestones\n- Recommended resources specific to {{#if programmingLanguage}}{{programmingLanguage}}{{/if}}{{#if targetLanguage}}{{targetLanguage}}{{/if}}{{#if designTools}}{{designTools}}{{/if}}{{#if instrument}}{{instrument}}{{/if}}\n- Practice exercises\n- Progress checkpoints\n- Time management tips\n{{#if projectType}}- Project-based learning focused on {{projectType}}{{/if}}\n{{#if languageGoal}}- Content tailored for {{languageGoal}} purposes{{/if}}',
         },
       ),
     ];
@@ -1159,6 +1239,12 @@ class PresetShortcutsService {
         type: VariableType.string,
         defaultValue: '',
         description: 'Generated code specifications',
+      ),
+      'testFramework': VariableDefinition(
+        name: 'testFramework',
+        type: VariableType.string,
+        defaultValue: '',
+        description: 'Testing framework to use',
       ),
     };
 
@@ -1416,7 +1502,7 @@ class PresetShortcutsService {
         id: 'code_specs_text',
         type: ComponentType.text,
         properties: {
-          'content': 'Language: {{language}}\nFramework: {{framework}}\nFeatures: {{codeFeatures}}\nTests: {{includeTests}}\nComments: {{includeComments}}\nStyle: {{codeStyle}}',
+          'content': 'Language: {{language}}\nFramework: {{framework}}\nFeatures: {{codeFeatures}}\nTests: {{includeTests}}{{#if includeTests}}\nTest Framework: {{testFramework}}{{/if}}\nComments: {{includeComments}}\nStyle: {{codeStyle}}',
           'outputVariable': 'codeSpecs',
         },
       ),
@@ -1424,7 +1510,7 @@ class PresetShortcutsService {
         id: 'final_prompt_5',
         type: ComponentType.finalPromptBuilder,
         properties: {
-          'promptTemplate': 'Generate {{language}} code with the following specifications:\n\n{{codeSpecs}}\n\nFunctionality Requirements:\n{{functionality}}\n\nCode Requirements:\n- Use {{framework}} framework\n- Follow {{codeStyle}} coding style\n- Include comprehensive error handling\n- Follow best practices for {{language}}\n- Make the code production-ready\n{{#if includeTests}}- Include complete unit tests{{/if}}\n{{#if includeComments}}- Add detailed comments{{/if}}',
+          'promptTemplate': 'Generate {{language}} code with the following specifications:\n\n{{codeSpecs}}\n\nFunctionality Requirements:\n{{functionality}}\n\nCode Requirements:\n- Use {{framework}} framework\n- Follow {{codeStyle}} coding style\n- Include comprehensive error handling\n- Follow best practices for {{language}}\n- Make the code production-ready\n{{#if includeTests}}- Include complete unit tests using {{testFramework}} framework{{/if}}\n{{#if includeComments}}- Add detailed comments{{/if}}\n\nSpecific Features to Include:\n{{codeFeatures}}\n\nEnsure the code is:\n- Well-structured and modular\n- Properly typed (if applicable)\n- Following SOLID principles\n- Ready for deployment',
         },
       ),
     ];
