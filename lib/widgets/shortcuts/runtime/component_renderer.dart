@@ -227,32 +227,14 @@ class _TextInputComponent extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Create unique controller for each component instance
-    final initialValue = useMemoized(
-      () => this.context.getVariable(component.variableBinding ?? '')?.toString() ?? '',
-      [component.id, component.variableBinding], // Recreate if component ID or binding changes
+    // Create controller with empty initial value to prevent content carrying over
+    final controller = useTextEditingController(
+      text: '', // Always start empty
+      keys: [component.id], // Use component ID as key
     );
-    
-    final controller = useTextEditingController(text: initialValue);
     final hasFocus = useState(false);
     
-    // Only update controller if this specific component's variable binding exists
-    // and the value has actually changed from an external source
-    useEffect(() {
-      // Skip if no variable binding or if user is typing
-      if (component.variableBinding == null || 
-          component.variableBinding!.isEmpty || 
-          hasFocus.value) {
-        return null;
-      }
-      
-      final currentValue = this.context.getVariable(component.variableBinding!)?.toString() ?? '';
-      // Only update if value changed and it's different from what user typed
-      if (currentValue != controller.text && currentValue != initialValue) {
-        controller.text = currentValue;
-      }
-      return null;
-    }, [component.variableBinding, this.context.getVariable(component.variableBinding ?? ''), hasFocus.value]);
+    // Don't auto-populate from context to avoid content transfer between steps
 
     final label = component.properties['label'] ?? 'Input';
     final placeholder = component.properties['placeholder'] ?? '';
@@ -340,32 +322,14 @@ class _MultilineTextInputComponent extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Create unique controller for each component instance
-    final initialValue = useMemoized(
-      () => this.context.getVariable(component.variableBinding ?? '')?.toString() ?? '',
-      [component.id, component.variableBinding], // Recreate if component ID or binding changes
+    // Create controller with empty initial value to prevent content carrying over
+    final controller = useTextEditingController(
+      text: '', // Always start empty
+      keys: [component.id], // Use component ID as key
     );
-    
-    final controller = useTextEditingController(text: initialValue);
     final hasFocus = useState(false);
     
-    // Only update controller if this specific component's variable binding exists
-    // and the value has actually changed from an external source
-    useEffect(() {
-      // Skip if no variable binding or if user is typing
-      if (component.variableBinding == null || 
-          component.variableBinding!.isEmpty || 
-          hasFocus.value) {
-        return null;
-      }
-      
-      final currentValue = this.context.getVariable(component.variableBinding!)?.toString() ?? '';
-      // Only update if value changed and it's different from what user typed
-      if (currentValue != controller.text && currentValue != initialValue) {
-        controller.text = currentValue;
-      }
-      return null;
-    }, [component.variableBinding, this.context.getVariable(component.variableBinding ?? ''), hasFocus.value]);
+    // Don't auto-populate from context to avoid content transfer between steps
 
     final label = component.properties['label'] ?? 'Input';
     final placeholder = component.properties['placeholder'] ?? '';
@@ -444,8 +408,13 @@ class _NumberInputComponent extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final value = useState<num?>(
-      this.context.getVariable(component.variableBinding ?? '') as num?,
+    // Don't initialize from context to prevent content carrying over
+    final value = useState<num?>(null);
+    
+    // Create a stable controller for this component instance
+    final controller = useTextEditingController(
+      text: '',  // Start empty
+      keys: [component.id], // Use component ID as key to ensure each component has its own controller
     );
 
     final label = component.properties['label'] ?? 'Number';
@@ -474,6 +443,7 @@ class _NumberInputComponent extends HookWidget {
                 final newValue = (value.value ?? min) - step;
                 if (newValue >= min) {
                   value.value = newValue;
+                  controller.text = newValue.toString();
                   if (component.variableBinding != null) {
                     onValueChanged(component.variableBinding!, newValue);
                   }
@@ -482,9 +452,7 @@ class _NumberInputComponent extends HookWidget {
             ),
             Expanded(
               child: TextField(
-                controller: useTextEditingController(
-                  text: value.value?.toString() ?? '',
-                ),
+                controller: controller,
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -524,6 +492,7 @@ class _NumberInputComponent extends HookWidget {
                 final newValue = (value.value ?? min) + step;
                 if (newValue <= max) {
                   value.value = newValue;
+                  controller.text = newValue.toString();
                   if (component.variableBinding != null) {
                     onValueChanged(component.variableBinding!, newValue);
                   }
@@ -561,9 +530,7 @@ class _DateTimePickerComponent extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedDate = useState<DateTime?>(
-      this.context.getVariable(component.variableBinding ?? '') as DateTime?,
-    );
+    final selectedDate = useState<DateTime?>(null);  // Start with null to avoid content carrying over
 
     final label = component.properties['label'] ?? 'Date';
     final required = component.properties['required'] ?? false;
@@ -681,11 +648,7 @@ class _SliderComponent extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final value = useState<double>(
-      (this.context.getVariable(component.variableBinding ?? '') as num?)
-              ?.toDouble() ??
-          0.0,
-    );
+    final value = useState<double>(0.0);  // Start with default value to avoid content carrying over
 
     final label = component.properties['label'] ?? 'Value';
     final min = (component.properties['min'] as num? ?? 0).toDouble();
@@ -779,9 +742,7 @@ class _SingleSelectComponent extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedValue = useState<String?>(
-      this.context.getVariable(component.variableBinding ?? '') as String?,
-    );
+    final selectedValue = useState<String?>(null);  // Start with null to avoid content carrying over
 
     final label = component.properties['label'] ?? 'Select';
     final options = component.properties['options'] as List<dynamic>? ?? [];
@@ -840,13 +801,7 @@ class _MultiSelectComponent extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedValues = useState<List<String>>(
-      (this.context.getVariable(component.variableBinding ?? '')
-                  as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          [],
-    );
+    final selectedValues = useState<List<String>>([]);  // Start with empty list to avoid content carrying over
 
     final label = component.properties['label'] ?? 'Select';
     final options = component.properties['options'] as List<dynamic>? ?? [];
@@ -928,9 +883,7 @@ class _DropdownComponent extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedValue = useState<String?>(
-      this.context.getVariable(component.variableBinding ?? '') as String?,
-    );
+    final selectedValue = useState<String?>(null);  // Start with null to avoid content carrying over
 
     final label = component.properties['label'] ?? 'Select';
     final options = component.properties['options'] as List<dynamic>? ?? [];
@@ -1009,10 +962,7 @@ class _ToggleComponent extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isOn = useState<bool>(
-      this.context.getVariable(component.variableBinding ?? '') as bool? ??
-          false,
-    );
+    final isOn = useState<bool>(false);  // Start with false to avoid content carrying over
 
     final label = component.properties['label'] ?? 'Toggle';
     final description = component.properties['description'] as String?;
@@ -1080,13 +1030,7 @@ class _TagSelectComponent extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedTags = useState<List<String>>(
-      (this.context.getVariable(component.variableBinding ?? '')
-                  as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          [],
-    );
+    final selectedTags = useState<List<String>>([]);  // Start with empty list to avoid content carrying over
 
     final label = component.properties['label'] ?? 'Tags';
     final options = component.properties['options'] as List<dynamic>? ?? [];
