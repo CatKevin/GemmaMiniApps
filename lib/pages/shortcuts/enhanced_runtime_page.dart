@@ -296,6 +296,11 @@ class EnhancedRuntimePage extends HookWidget {
     void navigateToNext() {
       if (!validateCurrentStep()) return;
       
+      // Re-process Text components with output variables after collecting input
+      if (shortcut.value != null && executionContext.value != null) {
+        processTextVariables(shortcut.value!, executionContext.value!);
+      }
+      
       // Check if current step is a switch-case that requires dynamic steps
       final currentStep = steps.value[currentStepIndex.value];
       
@@ -514,7 +519,7 @@ class EnhancedRuntimePage extends HookWidget {
                     animation: animationController,
                     child: _buildStepContent(
                       step: steps.value[index],
-                      context: executionContext.value!,
+                      executionContext: executionContext.value!,
                       animationController: animationController,
                       navigateToNext: navigateToNext,
                       menuLogicSelectionTrigger: menuLogicSelectionTrigger,
@@ -599,7 +604,7 @@ class EnhancedRuntimePage extends HookWidget {
   
   Widget _buildStepContent({
     required RenderStep step,
-    required ExecutionContext context,
+    required ExecutionContext executionContext,
     required animationController,
     required VoidCallback navigateToNext,
     required ValueNotifier<int> menuLogicSelectionTrigger,
@@ -612,7 +617,7 @@ class EnhancedRuntimePage extends HookWidget {
     
     // Confirmation step
     if (step.type == StepType.confirmation) {
-      return _buildConfirmationStep(context, theme);
+      return _buildConfirmationStep(executionContext, theme);
     }
     
     // Check if this is a Menu Logic step
@@ -662,9 +667,9 @@ class EnhancedRuntimePage extends HookWidget {
                 controller: animationController,
                 child: OptimizedComponentRenderer.render(
                   component,
-                  context,
+                  executionContext,
                   (variable, value) {
-                    context.setVariable(variable, value);
+                    executionContext.setVariable(variable, value);
                     // Trigger UI update for Menu Logic selection
                     if (isMenuLogicStep) {
                       menuLogicSelectionTrigger.value++;

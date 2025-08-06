@@ -86,8 +86,9 @@ class PromptBuilder {
   
   /// Process conditional blocks in the template
   static String _processConditionals(String template, ExecutionContext context) {
+    // Support both {{if}} and {{#if}} syntax
     final conditionalPattern = RegExp(
-      r'\{\{if\s+(.+?)\}\}([\s\S]*?)\{\{\/if\}\}',
+      r'\{\{#?if\s+(.+?)\}\}([\s\S]*?)\{\{\/if\}\}',
       multiLine: true,
     );
     
@@ -104,8 +105,9 @@ class PromptBuilder {
   
   /// Process loop blocks in the template
   static String _processLoops(String template, ExecutionContext context) {
+    // Support both {{each}} and {{#each}} syntax
     final loopPattern = RegExp(
-      r'\{\{each\s+(\w+)\s+as\s+(\w+)\}\}([\s\S]*?)\{\{\/each\}\}',
+      r'\{\{#?each\s+(\w+)\s+as\s+(\w+)\}\}([\s\S]*?)\{\{\/each\}\}',
       multiLine: true,
     );
     

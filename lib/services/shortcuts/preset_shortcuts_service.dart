@@ -291,7 +291,7 @@ class PresetShortcutsService {
         id: 'guidelines_text',
         type: ComponentType.text,
         properties: {
-          'content': 'Based on your selections, I will create {{articleType}} about {{topic}} with a {{tone}} tone. {{keywords}} {{targetAudience}}',
+          'content': 'Based on your selections, I will create {{articleType}} about {{topic}} with a {{tone}} tone.',
           'outputVariable': 'writingGuidelines',
         },
       ),
@@ -817,6 +817,17 @@ class PresetShortcutsService {
           'size': 'large',
         },
       ),
+      // Subject selection dropdown
+      UIComponent(
+        id: 'subject_dropdown',
+        type: ComponentType.dropdown,
+        properties: {
+          'label': 'Choose a subject',
+          'options': ['Programming', 'Language Learning', 'Design', 'Music'],
+          'placeholder': 'Select subject area',
+        },
+        variableBinding: 'subject',
+      ),
       // Menu Logic for subject selection
       UIComponent(
         id: 'subject_menu',
@@ -1203,6 +1214,17 @@ class PresetShortcutsService {
           'required': true,
         },
         variableBinding: 'functionality',
+      ),
+      // Language selection dropdown
+      UIComponent(
+        id: 'language_dropdown',
+        type: ComponentType.dropdown,
+        properties: {
+          'label': 'Programming Language',
+          'options': ['Python', 'JavaScript', 'Java', 'Go', 'TypeScript'],
+          'placeholder': 'Select language',
+        },
+        variableBinding: 'language',
       ),
       // Menu Logic for language selection
       UIComponent(
