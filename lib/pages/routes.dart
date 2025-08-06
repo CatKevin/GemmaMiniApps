@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'main_container.dart';
 import 'chat/chat_page.dart';
 import 'shortcuts/shortcuts_page.dart';
 import 'shortcuts/enhanced_runtime_page.dart';
@@ -84,9 +85,15 @@ abstract class Routes {
 
 // GetPage configurations
 class AppPages {
-  static const initial = Routes.chat;
+  static const initial = Routes.initial;
 
   static final routes = [
+    GetPage(
+      name: Routes.initial,
+      page: () => const MainContainer(),
+      transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 200),
+    ),
     GetPage(
       name: Routes.chat,
       page: () => const ChatPage(),

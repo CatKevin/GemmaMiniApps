@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:get/get.dart';
 import '../../core/theme/controllers/theme_controller.dart';
+import '../../controllers/shortcuts_navigation_controller.dart';
 import '../routes.dart';
 import '../../models/shortcuts/models.dart';
 import '../../services/shortcuts/storage_service.dart';
@@ -125,8 +126,14 @@ class ShortcutsPage extends HookWidget {
                       await storageService.value!.updateUsageStats(shortcut.id);
                     }
                     
-                    // Navigate to runtime
-                    Routes.toShortcutsRuntime(shortcutId: shortcut.id);
+                    // Navigate to runtime using Stack navigation
+                    try {
+                      final shortcutsNavController = Get.find<ShortcutsNavigationController>();
+                      shortcutsNavController.navigateToRuntime(shortcut.id);
+                    } catch (e) {
+                      // Fallback to regular navigation if controller not found
+                      Routes.toShortcutsRuntime(shortcutId: shortcut.id);
+                    }
                   },
                 ),
               );
@@ -238,8 +245,14 @@ class ShortcutsPage extends HookWidget {
                                     await storageService.value!.updateUsageStats(shortcut.id);
                                   }
                                   
-                                  // Navigate to runtime
-                                  Routes.toShortcutsRuntime(shortcutId: shortcut.id);
+                                  // Navigate to runtime using Stack navigation
+                                  try {
+                                    final shortcutsNavController = Get.find<ShortcutsNavigationController>();
+                                    shortcutsNavController.navigateToRuntime(shortcut.id);
+                                  } catch (e) {
+                                    // Fallback to regular navigation if controller not found
+                                    Routes.toShortcutsRuntime(shortcutId: shortcut.id);
+                                  }
                                 },
                                 onLongPress: () => _showContextMenu(
                                   context: context,
@@ -427,7 +440,14 @@ class ShortcutsPage extends HookWidget {
                   label: 'Run Shortcut',
                   onTap: () {
                     Navigator.of(context).pop();
-                    Routes.toShortcutsRuntime(shortcutId: shortcut.id);
+                    // Navigate to runtime using Stack navigation
+                    try {
+                      final shortcutsNavController = Get.find<ShortcutsNavigationController>();
+                      shortcutsNavController.navigateToRuntime(shortcut.id);
+                    } catch (e) {
+                      // Fallback to regular navigation if controller not found
+                      Routes.toShortcutsRuntime(shortcutId: shortcut.id);
+                    }
                   },
                 ),
                 _ContextMenuItem(

@@ -8,6 +8,7 @@ import '../../widgets/chat_input/chat_input.dart';
 import '../../widgets/button_bar/button_bar.dart';
 import '../../core/theme/controllers/theme_controller.dart';
 import '../../core/theme/widgets/theme_switcher.dart';
+import '../../controllers/stack_navigation_controller.dart';
 import '../routes.dart';
 
 // Message model
@@ -29,6 +30,14 @@ class ChatPage extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final themeController = ThemeController.to;
+    
+    // Get Stack Navigation Controller if available
+    StackNavigationController? stackNavController;
+    try {
+      stackNavController = Get.find<StackNavigationController>();
+    } catch (e) {
+      // Controller not found, running in standalone mode
+    }
     
     // State management using hooks
     final messages = useState<List<Message>>([
@@ -59,6 +68,71 @@ class ChatPage extends HookWidget {
       scaleController.forward();
       return null;
     }, []);
+    
+    // Define sendMessage function before using it
+    void sendMessage(String text) {
+      if (text.trim().isEmpty) return;
+
+      // Haptic feedback
+      HapticFeedback.lightImpact();
+
+      // Add user message
+      messages.value = [
+        ...messages.value,
+        Message(text: text, isUser: true),
+      ];
+
+      // Simulate AI response
+      isTyping.value = true;
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        HapticFeedback.lightImpact();
+        isTyping.value = false;
+        messages.value = [
+          ...messages.value,
+          Message(
+            text:
+                "Processing your request with advanced neural networks. This is a placeholder response showcasing the future of local AI processing.",
+            isUser: false,
+          ),
+        ];
+      });
+    }
+    
+    // Check for pending prompts from Stack Navigation
+    useEffect(() {
+      if (stackNavController != null) {
+        // Store non-nullable reference
+        final controller = stackNavController;
+        
+        // Listen to hasPromptToSend changes
+        final subscription = controller.hasPromptToSend.listen((hasPrompt) {
+          if (hasPrompt) {
+            // Delay slightly to ensure page is ready
+            Future.delayed(const Duration(milliseconds: 300), () {
+              final prompt = controller.pendingPrompt.value;
+              if (prompt.isNotEmpty) {
+                sendMessage(prompt);
+                controller.clearPendingPrompt();
+              }
+            });
+          }
+        });
+        
+        // Check immediately in case there's already a pending prompt
+        if (controller.hasPromptToSend.value) {
+          Future.delayed(const Duration(milliseconds: 300), () {
+            final prompt = controller.pendingPrompt.value;
+            if (prompt.isNotEmpty) {
+              sendMessage(prompt);
+              controller.clearPendingPrompt();
+            }
+          });
+        }
+        
+        return subscription.cancel;
+      }
+      return null;
+    }, [stackNavController]);
 
     // Listen to scroll position
     useEffect(() {
@@ -88,34 +162,6 @@ class ChatPage extends HookWidget {
       return null;
     }, [messages.value.length]);
 
-    // Handle sending message
-    void sendMessage(String text) {
-      if (text.trim().isEmpty) return;
-
-      // Haptic feedback
-      HapticFeedback.lightImpact();
-
-      // Add user message
-      messages.value = [
-        ...messages.value,
-        Message(text: text, isUser: true),
-      ];
-
-      // Simulate AI response
-      isTyping.value = true;
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        HapticFeedback.lightImpact();
-        isTyping.value = false;
-        messages.value = [
-          ...messages.value,
-          Message(
-            text:
-                "Processing your request with advanced neural networks. This is a placeholder response showcasing the future of local AI processing.",
-            isUser: false,
-          ),
-        ];
-      });
-    }
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -175,7 +221,7 @@ class ChatPage extends HookWidget {
                       child: ScaleTransition(
                         scale: CurvedAnimation(
                           parent: scaleController,
-                          curve: Curves.elasticOut,
+                          curve: Curves.easeOutBack, // Changed from elasticOut
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,

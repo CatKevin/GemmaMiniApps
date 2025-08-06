@@ -7,7 +7,8 @@ import '../../models/shortcuts/models.dart';
 import '../../services/shortcuts/storage_service.dart';
 import '../../services/shortcuts/step_generator.dart';
 import '../../services/shortcuts/prompt_builder.dart';
-import '../../services/shortcuts/mock_ai_service.dart';
+import '../../controllers/stack_navigation_controller.dart';
+import '../../controllers/shortcuts_navigation_controller.dart';
 import '../../widgets/shortcuts/runtime/advanced_ui_theme.dart';
 import '../../widgets/shortcuts/runtime/transition_effects.dart';
 import '../../widgets/shortcuts/runtime/optimized_component_renderer.dart';
@@ -22,9 +23,16 @@ class EnhancedRuntimePage extends HookWidget {
     final themeController = ThemeController.to;
     final theme = themeController.currentThemeConfig;
     
-    // Get shortcut ID from arguments
-    final args = Get.arguments as Map<String, dynamic>?;
-    final shortcutId = args?['shortcutId'] as String?;
+    // Get shortcut ID from ShortcutsNavigationController or arguments
+    String? shortcutId;
+    try {
+      final shortcutsNavController = Get.find<ShortcutsNavigationController>();
+      shortcutId = shortcutsNavController.runtimeShortcutId.value;
+    } catch (e) {
+      // Fallback to arguments if controller not found
+      final args = Get.arguments as Map<String, dynamic>?;
+      shortcutId = args?['shortcutId'] as String?;
+    }
     
     // State management
     final shortcut = useState<ShortcutDefinition?>(null);
@@ -170,7 +178,7 @@ class EnhancedRuntimePage extends HookWidget {
         isLoadingShortcut.value = true;
         
         ShortcutsStorageService.initialize().then((storage) async {
-          final loadedShortcut = await storage.getShortcut(shortcutId);
+          final loadedShortcut = await storage.getShortcut(shortcutId!);
           if (loadedShortcut != null) {
             shortcut.value = loadedShortcut;
             
@@ -670,7 +678,16 @@ class EnhancedRuntimePage extends HookWidget {
             children: [
               IconButton(
                 icon: Icon(Icons.close, color: theme.onBackground),
-                onPressed: () => Get.back(),
+                onPressed: () {
+                  // Try to use ShortcutsNavigationController first
+                  try {
+                    final shortcutsNavController = Get.find<ShortcutsNavigationController>();
+                    shortcutsNavController.navigateToList();
+                  } catch (e) {
+                    // Fallback to regular navigation
+                    Get.back();
+                  }
+                },
               ),
               Expanded(
                 child: Text(
@@ -1050,8 +1067,7 @@ class _ResultView extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final theme = ThemeController.to.currentThemeConfig;
-    final aiResponse = useState<String?>(null);
-    final isLoadingAI = useState(false);
+    // AI Response states removed - now using Stack Navigation to send to chat
     final animationController = useAnimationController(
       duration: const Duration(milliseconds: 600),
     );
@@ -1069,7 +1085,16 @@ class _ResultView extends HookWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => Get.back(),
+          onPressed: () {
+            // Try to use ShortcutsNavigationController first
+            try {
+              final shortcutsNavController = Get.find<ShortcutsNavigationController>();
+              shortcutsNavController.navigateToList();
+            } catch (e) {
+              // Fallback to regular navigation
+              Get.back();
+            }
+          },
         ),
       ),
       body: TransitionEffects.slideUpTransition(
@@ -1182,67 +1207,31 @@ class _ResultView extends HookWidget {
                   const SizedBox(width: 16),
                   Expanded(
                     child: AdvancedUITheme.gradientButton(
-                      text: 'SEND TO AI',
+                      text: 'SEND',
                       icon: Icons.send,
-                      onPressed: () async {
-                        isLoadingAI.value = true;
+                      onPressed: () {
+                        // Use Stack Navigation to send prompt to chat
                         try {
-                          final response = await MockAIService.sendPrompt(prompt);
-                          aiResponse.value = response;
+                          final stackNavController = Get.find<StackNavigationController>();
+                          HapticFeedback.mediumImpact();
+                          stackNavController.sendPromptToChat(prompt);
                         } catch (e) {
-                          aiResponse.value = 'Error: ${e.toString()}';
-                        } finally {
-                          isLoadingAI.value = false;
+                          // If controller not found, show error
+                          Get.snackbar(
+                            'Error', 
+                            'Unable to send to chat. Please try again.',
+                            backgroundColor: ThemeController.to.currentThemeConfig.error,
+                            colorText: ThemeController.to.currentThemeConfig.onError,
+                          );
                         }
                       },
-                      isLoading: isLoadingAI.value,
+                      isLoading: false,
                     ),
                   ),
                 ],
               ),
               
-              // AI Response
-              if (aiResponse.value != null) ...[
-                const SizedBox(height: 32),
-                TransitionEffects.slideUpTransition(
-                  animation: animationController,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.psychology,
-                            color: theme.primary,
-                            size: 28,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'AI Response',
-                            style: TextStyle(
-                              color: theme.onBackground,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      AdvancedUITheme.glassmorphicContainer(
-                        padding: const EdgeInsets.all(20),
-                        child: SelectableText(
-                          aiResponse.value!,
-                          style: TextStyle(
-                            color: theme.onSurface,
-                            fontSize: 16,
-                            height: 1.6,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              // Note: AI Response removed - prompt is now sent directly to chat
             ],
           ),
         ),
