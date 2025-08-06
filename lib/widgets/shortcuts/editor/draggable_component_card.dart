@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import '../../../core/theme/models/theme_config.dart';
 import '../../../models/shortcuts/models.dart';
+import '../../../services/shortcuts/component_icon_service.dart';
 import 'property_editor.dart';
 
 class DraggableComponentCard extends HookWidget {
@@ -117,12 +118,12 @@ class DraggableComponentCard extends HookWidget {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: theme.primary.withValues(alpha: 0.1),
+                                color: _getComponentColor().withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
-                                _getComponentIcon(component.component.type),
-                                color: theme.primary,
+                                template?.icon ?? ComponentIconService.getIcon(component.component.type),
+                                color: _getComponentColor(),
                                 size: 20,
                               ),
                             ),
@@ -306,28 +307,19 @@ class DraggableComponentCard extends HookWidget {
     );
   }
 
-  IconData _getComponentIcon(ComponentType type) {
-    switch (type) {
-      case ComponentType.textInput:
-      case ComponentType.multilineTextInput:
-        return Icons.text_fields;
-      case ComponentType.numberInput:
-        return Icons.numbers;
-      case ComponentType.singleSelect:
-        return Icons.radio_button_checked;
-      case ComponentType.multiSelect:
-        return Icons.check_box;
-      case ComponentType.conditional:
-        return Icons.alt_route;
-      case ComponentType.text:
-        return Icons.text_snippet;
-      case ComponentType.roleDefinition:
-        return Icons.person;
-      case ComponentType.taskDescription:
-        return Icons.task_alt;
-      default:
-        return Icons.widgets;
+  Color _getComponentColor() {
+    // Check if it's a composite component (IF-ELSE, Menu Logic, etc.)
+    if (component.isComposite && component.compositeComponent != null) {
+      return ComponentIconService.getCompositeColor(component.compositeComponent!.type);
     }
+    
+    // For regular components, use category-based color
+    if (template != null) {
+      return ComponentIconService.getCategoryColor(template!.category);
+    }
+    
+    // Fallback to component type color
+    return ComponentIconService.getComponentColor(component.component.type);
   }
 
   String _getComponentTitle(UIComponent component) {

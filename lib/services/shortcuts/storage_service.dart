@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/shortcuts/models.dart';
+import 'preset_shortcuts_service.dart';
 
 /// Service for persisting shortcuts data
 class ShortcutsStorageService {
@@ -255,119 +256,21 @@ class ShortcutsStorageService {
     final existingShortcuts = await getAllShortcuts();
     if (existingShortcuts.isNotEmpty) return;
     
-    // Create a sample article writing shortcut
-    final articleWriter = ShortcutDefinition(
-      id: 'default_article_writer',
-      name: 'Article Writer',
-      description: 'Write professional articles on any topic',
-      category: ShortcutCategory.creative.name,
-      icon: ShortcutIcon(iconData: Icons.article),
-      version: '1.0.0',
-      author: 'System',
-      isBuiltIn: true,
-      screens: [
-        ScreenDefinition(
-          id: 'main_screen',
-          title: 'Article Configuration',
-          components: [
-            UIComponent(
-              id: 'article_type',
-              type: ComponentType.singleSelect,
-              properties: {
-                'label': 'Article Type',
-                'options': ['News Report', 'Tech Blog', 'Academic Paper', 'Creative Story'],
-              },
-              variableBinding: 'articleType',
-              validation: ValidationRule(
-                type: ValidationType.required,
-                parameters: {},
-                errorMessage: 'Please select an article type',
-              ),
-            ),
-            UIComponent(
-              id: 'topic_input',
-              type: ComponentType.textInput,
-              properties: {
-                'label': 'Article Topic',
-                'placeholder': 'Enter your article topic...',
-                'maxLength': 100,
-              },
-              variableBinding: 'topic',
-              validation: ValidationRule(
-                type: ValidationType.required,
-                parameters: {},
-                errorMessage: 'Topic is required',
-              ),
-            ),
-            UIComponent(
-              id: 'style_select',
-              type: ComponentType.multiSelect,
-              properties: {
-                'label': 'Writing Style',
-                'options': ['Professional', 'Easy to understand', 'Humorous', 'Data-driven'],
-              },
-              variableBinding: 'styles',
-            ),
-          ],
-          actions: {
-            'generate': ScreenAction(
-              label: 'Generate Article',
-              type: ActionType.submit,
-              parameters: {},
-            ),
-          },
-        ),
-      ],
-      startScreenId: 'main_screen',
-      transitions: {},
-      variables: {
-        'articleType': VariableDefinition(
-          name: 'articleType',
-          type: VariableType.string,
-          description: 'Type of article to write',
-        ),
-        'topic': VariableDefinition(
-          name: 'topic',
-          type: VariableType.string,
-          description: 'Main topic of the article',
-        ),
-        'styles': VariableDefinition(
-          name: 'styles',
-          type: VariableType.list,
-          defaultValue: [],
-          description: 'Selected writing styles',
-        ),
-      },
-      promptTemplate: PromptTemplate(
-        sections: [
-          PromptSection(
-            id: 'role',
-            type: PromptSectionType.role,
-            content: 'You are a professional {{articleType}} writer with years of experience.',
-            order: 1,
-          ),
-          PromptSection(
-            id: 'task',
-            type: PromptSectionType.task,
-            content: 'Write a comprehensive article about "{{topic}}".',
-            order: 2,
-          ),
-          PromptSection(
-            id: 'style',
-            type: PromptSectionType.constraints,
-            content: 'Writing style requirements: {{styles}}',
-            condition: 'styles isNotEmpty',
-            order: 3,
-          ),
-        ],
-        assemblyLogic: 'sequential',
-      ),
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      usageCount: 0,
-    );
+    // Load all preset shortcuts
+    final presetService = PresetShortcutsService();
+    final presetShortcuts = presetService.getPresetShortcuts();
     
-    await saveShortcut(articleWriter);
+    // Save each preset shortcut
+    for (final shortcut in presetShortcuts) {
+      try {
+        await saveShortcut(shortcut);
+        print('Created preset shortcut: ${shortcut.name}');
+      } catch (e) {
+        print('Failed to create preset shortcut ${shortcut.name}: $e');
+      }
+    }
+    
+    print('Created ${presetShortcuts.length} preset shortcuts');
   }
 }
 

@@ -455,6 +455,237 @@ class ComponentTemplateLibrary {
         ),
       ],
     ),
+    ComponentTemplate(
+      id: 'dropdown',
+      name: 'Dropdown',
+      description: 'Dropdown menu selection',
+      icon: Icons.arrow_drop_down_circle,
+      category: ComponentCategory.selection,
+      type: ComponentType.dropdown,
+      defaultProperties: {
+        'options': ['Option 1', 'Option 2', 'Option 3'],
+        'placeholder': 'Select an option',
+      },
+      editableProperties: [
+        ComponentProperty(
+          key: 'label',
+          label: 'Label',
+          type: PropertyType.text,
+          required: true,
+        ),
+        ComponentProperty(
+          key: 'variableName',
+          label: 'Variable Name',
+          type: PropertyType.variable,
+          required: false,
+        ),
+        ComponentProperty(
+          key: 'options',
+          label: 'Options',
+          type: PropertyType.multiSelect,
+          required: true,
+        ),
+        ComponentProperty(
+          key: 'placeholder',
+          label: 'Placeholder',
+          type: PropertyType.text,
+        ),
+      ],
+    ),
+    ComponentTemplate(
+      id: 'toggle',
+      name: 'Toggle',
+      description: 'On/Off toggle switch',
+      icon: Icons.toggle_on,
+      category: ComponentCategory.selection,
+      type: ComponentType.toggle,
+      defaultProperties: {
+        'defaultValue': false,
+      },
+      editableProperties: [
+        ComponentProperty(
+          key: 'label',
+          label: 'Label',
+          type: PropertyType.text,
+          required: true,
+        ),
+        ComponentProperty(
+          key: 'variableName',
+          label: 'Variable Name',
+          type: PropertyType.variable,
+          required: false,
+        ),
+        ComponentProperty(
+          key: 'defaultValue',
+          label: 'Default State',
+          type: PropertyType.boolean,
+          defaultValue: false,
+        ),
+      ],
+    ),
+    ComponentTemplate(
+      id: 'slider',
+      name: 'Slider',
+      description: 'Value slider input',
+      icon: Icons.tune,
+      category: ComponentCategory.input,
+      type: ComponentType.slider,
+      defaultProperties: {
+        'min': 0,
+        'max': 100,
+        'step': 1,
+        'showLabels': true,
+      },
+      editableProperties: [
+        ComponentProperty(
+          key: 'label',
+          label: 'Label',
+          type: PropertyType.text,
+          required: true,
+        ),
+        ComponentProperty(
+          key: 'variableName',
+          label: 'Variable Name',
+          type: PropertyType.variable,
+          required: false,
+        ),
+        ComponentProperty(
+          key: 'min',
+          label: 'Minimum Value',
+          type: PropertyType.number,
+          defaultValue: 0,
+        ),
+        ComponentProperty(
+          key: 'max',
+          label: 'Maximum Value',
+          type: PropertyType.number,
+          defaultValue: 100,
+        ),
+        ComponentProperty(
+          key: 'step',
+          label: 'Step',
+          type: PropertyType.number,
+          defaultValue: 1,
+        ),
+        ComponentProperty(
+          key: 'showLabels',
+          label: 'Show Labels',
+          type: PropertyType.boolean,
+          defaultValue: true,
+        ),
+      ],
+    ),
+    ComponentTemplate(
+      id: 'date-time-picker',
+      name: 'Date/Time Picker',
+      description: 'Date and time selection',
+      icon: Icons.calendar_today,
+      category: ComponentCategory.input,
+      type: ComponentType.dateTimePicker,
+      defaultProperties: {
+        'mode': 'date',
+      },
+      editableProperties: [
+        ComponentProperty(
+          key: 'label',
+          label: 'Label',
+          type: PropertyType.text,
+          required: true,
+        ),
+        ComponentProperty(
+          key: 'variableName',
+          label: 'Variable Name',
+          type: PropertyType.variable,
+          required: false,
+        ),
+        ComponentProperty(
+          key: 'mode',
+          label: 'Mode',
+          type: PropertyType.select,
+          defaultValue: 'date',
+          options: ['date', 'time', 'datetime'],
+        ),
+      ],
+    ),
+    ComponentTemplate(
+      id: 'tag-input',
+      name: 'Tag Input',
+      description: 'Multiple tag input',
+      icon: Icons.local_offer,
+      category: ComponentCategory.selection,
+      type: ComponentType.tagInput,
+      defaultProperties: {
+        'placeholder': 'Add tags...',
+      },
+      editableProperties: [
+        ComponentProperty(
+          key: 'label',
+          label: 'Label',
+          type: PropertyType.text,
+          required: true,
+        ),
+        ComponentProperty(
+          key: 'variableName',
+          label: 'Variable Name',
+          type: PropertyType.variable,
+          required: false,
+        ),
+        ComponentProperty(
+          key: 'placeholder',
+          label: 'Placeholder',
+          type: PropertyType.text,
+          defaultValue: 'Add tags...',
+        ),
+      ],
+    ),
+    
+    // Display Components
+    ComponentTemplate(
+      id: 'title-text',
+      name: 'Title Text',
+      description: 'Display title text',
+      icon: Icons.title,
+      category: ComponentCategory.display,
+      type: ComponentType.titleText,
+      defaultProperties: {
+        'text': 'Title',
+        'size': 'large',
+      },
+      editableProperties: [
+        ComponentProperty(
+          key: 'text',
+          label: 'Title Text',
+          type: PropertyType.text,
+          required: true,
+        ),
+        ComponentProperty(
+          key: 'size',
+          label: 'Size',
+          type: PropertyType.select,
+          defaultValue: 'large',
+          options: ['small', 'medium', 'large'],
+        ),
+      ],
+    ),
+    ComponentTemplate(
+      id: 'description-text',
+      name: 'Description Text',
+      description: 'Display description text',
+      icon: Icons.description,
+      category: ComponentCategory.display,
+      type: ComponentType.descriptionText,
+      defaultProperties: {
+        'text': 'Description',
+      },
+      editableProperties: [
+        ComponentProperty(
+          key: 'text',
+          label: 'Description Text',
+          type: PropertyType.text,
+          required: true,
+        ),
+      ],
+    ),
     
     // Logic Components
     // Individual logic blocks have been replaced by composite components
@@ -500,6 +731,25 @@ class ComponentTemplateLibrary {
         ComponentProperty(
           key: 'task',
           label: 'Task Description',
+          type: PropertyType.richText,
+          required: true,
+        ),
+      ],
+    ),
+    ComponentTemplate(
+      id: 'final-prompt-builder',
+      name: 'Final Prompt Builder',
+      description: 'Build final prompt with variables',
+      icon: Icons.auto_awesome,
+      category: ComponentCategory.prompt,
+      type: ComponentType.finalPromptBuilder,
+      defaultProperties: {
+        'template': '',
+      },
+      editableProperties: [
+        ComponentProperty(
+          key: 'template',
+          label: 'Prompt Template',
           type: PropertyType.richText,
           required: true,
         ),
