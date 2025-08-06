@@ -817,17 +817,6 @@ class PresetShortcutsService {
           'size': 'large',
         },
       ),
-      // Subject selection dropdown
-      UIComponent(
-        id: 'subject_dropdown',
-        type: ComponentType.dropdown,
-        properties: {
-          'label': 'Choose a subject',
-          'options': ['Programming', 'Language Learning', 'Design', 'Music'],
-          'placeholder': 'Select subject area',
-        },
-        variableBinding: 'subject',
-      ),
       // Menu Logic for subject selection
       UIComponent(
         id: 'subject_menu',
@@ -1214,17 +1203,6 @@ class PresetShortcutsService {
           'required': true,
         },
         variableBinding: 'functionality',
-      ),
-      // Language selection dropdown
-      UIComponent(
-        id: 'language_dropdown',
-        type: ComponentType.dropdown,
-        properties: {
-          'label': 'Programming Language',
-          'options': ['Python', 'JavaScript', 'Java', 'Go', 'TypeScript'],
-          'placeholder': 'Select language',
-        },
-        variableBinding: 'language',
       ),
       // Menu Logic for language selection
       UIComponent(

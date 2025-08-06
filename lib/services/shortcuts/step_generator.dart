@@ -77,6 +77,19 @@ class StepGenerator {
       
       // Special handling for composite components
       if (_isCompositeComponent(component)) {
+        final compositeData = component.properties['compositeData'] as Map<String, dynamic>?;
+        final compositeType = compositeData?['type'] ?? '';
+        
+        // Check if it's an IF-ELSE component without visible components
+        if ((compositeType == 'CompositeComponentType.ifElse' || compositeType == 'ifElse') &&
+            !_compositeHasVisibleComponents(component)) {
+          // Skip creating a step, but mark as processed
+          processedComponents.add(component.id);
+          remainingComponents.remove(component);
+          continue;
+        }
+        
+        // For switch-case or IF-ELSE with visible components, create a step
         final step = _createCompositeStep(component);
         steps.add(step);
         processedComponents.add(component.id);
@@ -161,6 +174,39 @@ class StepGenerator {
   /// Check if component is a composite component
   static bool _isCompositeComponent(UIComponent component) {
     return component.properties['isComposite'] == true;
+  }
+  
+  /// Check if composite component has any visible components
+  static bool _compositeHasVisibleComponents(UIComponent component) {
+    final compositeData = component.properties['compositeData'] as Map<String, dynamic>?;
+    if (compositeData == null) return false;
+    
+    final sections = compositeData['sections'] as List?;
+    if (sections == null) return false;
+    
+    // Check each section for visible components
+    for (final section in sections) {
+      if (section is Map<String, dynamic>) {
+        final children = section['children'] as List?;
+        if (children != null && children.isNotEmpty) {
+          // Check if any child is visible
+          for (final child in children) {
+            if (child is Map<String, dynamic>) {
+              final childComponent = child['component'] as Map<String, dynamic>?;
+              if (childComponent != null) {
+                // Create a UIComponent to check if it's variable-only
+                final uiComponent = UIComponent.fromJson(childComponent);
+                if (!_isVariableOnlyComponent(uiComponent)) {
+                  return true; // Found a visible component
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    return false; // No visible components found
   }
   
   /// Create step for composite component
@@ -295,6 +341,19 @@ class StepGenerator {
       
       // Handle nested composite components
       if (_isCompositeComponent(component)) {
+        final compositeData = component.properties['compositeData'] as Map<String, dynamic>?;
+        final compositeType = compositeData?['type'] ?? '';
+        
+        // Check if it's an IF-ELSE component without visible components
+        if ((compositeType == 'CompositeComponentType.ifElse' || compositeType == 'ifElse') &&
+            !_compositeHasVisibleComponents(component)) {
+          // Skip creating a step, but mark as processed
+          processedComponents.add(component.id);
+          remainingComponents.remove(component);
+          continue;
+        }
+        
+        // For switch-case or IF-ELSE with visible components, create a step
         final step = _createCompositeStep(component);
         steps.add(step);
         processedComponents.add(component.id);
