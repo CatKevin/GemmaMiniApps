@@ -211,8 +211,19 @@ class ComponentPropertyEditor extends HookWidget {
   }
   
   Widget _buildMultiSelectField(ComponentProperty property, ThemeConfig theme) {
-    final currentValue = component.properties[property.key] as List<String>? ?? 
-                        (property.defaultValue as List<dynamic>?)?.cast<String>() ?? [];
+    // Safely handle both List<String> and List<dynamic> types
+    final rawValue = component.properties[property.key];
+    List<String> currentValue;
+    
+    if (rawValue is List<String>) {
+      currentValue = rawValue;
+    } else if (rawValue is List) {
+      currentValue = rawValue.map((e) => e.toString()).toList();
+    } else if (property.defaultValue is List) {
+      currentValue = (property.defaultValue as List).map((e) => e.toString()).toList();
+    } else {
+      currentValue = [];
+    }
     
     // Create a list of controllers for each option
     final controllers = currentValue.map((value) => 
