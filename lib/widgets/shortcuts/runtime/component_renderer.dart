@@ -106,6 +106,22 @@ class ComponentRenderer {
           theme: theme,
         );
 
+      case ComponentType.tagInput:
+        return _TagInputComponent(
+          component: component,
+          context: context,
+          onValueChanged: onValueChanged,
+          theme: theme,
+        );
+
+      case ComponentType.switch_:
+        return _SwitchComponent(
+          component: component,
+          context: context,
+          onValueChanged: onValueChanged,
+          theme: theme,
+        );
+
       // Display Components
       case ComponentType.descriptionText:
         return _DescriptionTextComponent(
@@ -188,6 +204,43 @@ class ComponentRenderer {
           context: context,
           theme: theme,
         );
+
+      // Logic blocks (handled elsewhere, not rendered directly)
+      case ComponentType.ifBlock:
+      case ComponentType.elseBlock:
+      case ComponentType.elseIfBlock:
+      case ComponentType.forLoop:
+      case ComponentType.whileLoop:
+        return const SizedBox.shrink();
+
+      // Integration components (not yet implemented)
+      case ComponentType.apiCall:
+      case ComponentType.fileOperation:
+      case ComponentType.dataTransform:
+      case ComponentType.jsonParser:
+      case ComponentType.csvParser:
+        return _ComingSoonComponent(
+          component: component,
+          theme: theme,
+          message: 'Integration component coming soon',
+        );
+
+      // Advanced UI components (not yet implemented)
+      case ComponentType.fileUpload:
+      case ComponentType.imageDisplay:
+      case ComponentType.markdown:
+      case ComponentType.codeEditor:
+      case ComponentType.chartDisplay:
+        return _ComingSoonComponent(
+          component: component,
+          theme: theme,
+          message: 'Advanced component coming soon',
+        );
+
+      // Special components
+      case ComponentType.finalPromptBuilder:
+        // This should be handled separately in the runtime
+        return const SizedBox.shrink();
 
       default:
         return _UnknownComponent(
@@ -1116,6 +1169,200 @@ class _TagSelectComponent extends HookWidget {
   }
 }
 
+/// Tag input component - allows users to input custom tags
+class _TagInputComponent extends HookWidget {
+  final UIComponent component;
+  final ExecutionContext context;
+  final Function(String, dynamic) onValueChanged;
+  final ThemeConfig theme;
+
+  const _TagInputComponent({
+    required this.component,
+    required this.context,
+    required this.onValueChanged,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tags = useState<List<String>>([]);  // Start with empty list
+    final inputController = useTextEditingController();
+    final focusNode = useFocusNode();
+
+    final label = component.properties['label'] ?? 'Tags';
+    final placeholder = component.properties['placeholder'] ?? 'Add a tag...';
+    final maxTags = component.properties['maxTags'] as int?;
+
+    void addTag() {
+      final text = inputController.text.trim();
+      if (text.isNotEmpty) {
+        if (maxTags == null || tags.value.length < maxTags) {
+          if (!tags.value.contains(text)) {
+            tags.value = [...tags.value, text];
+            inputController.clear();
+            
+            if (component.variableBinding != null) {
+              onValueChanged(component.variableBinding!, tags.value);
+            }
+          }
+        }
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: theme.onBackground,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Tags display
+        if (tags.value.isNotEmpty) ...[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: tags.value.map((tag) {
+              return Chip(
+                label: Text(tag),
+                deleteIcon: Icon(
+                  Icons.close,
+                  size: 18,
+                  color: theme.onSurface.withValues(alpha: 0.6),
+                ),
+                onDeleted: () {
+                  tags.value = tags.value.where((t) => t != tag).toList();
+                  if (component.variableBinding != null) {
+                    onValueChanged(component.variableBinding!, tags.value);
+                  }
+                },
+                backgroundColor: theme.surface,
+                labelStyle: TextStyle(color: theme.onSurface),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(
+                    color: theme.onSurface.withValues(alpha: 0.2),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 8),
+        ],
+        // Input field
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: inputController,
+                focusNode: focusNode,
+                onSubmitted: (_) => addTag(),
+                style: TextStyle(color: theme.onSurface),
+                decoration: InputDecoration(
+                  hintText: placeholder,
+                  hintStyle: TextStyle(
+                    color: theme.onSurface.withValues(alpha: 0.5),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(
+                      color: theme.onSurface.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(
+                      color: theme.primary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: addTag,
+              icon: Icon(Icons.add),
+              style: IconButton.styleFrom(
+                backgroundColor: theme.primary,
+                foregroundColor: theme.onPrimary,
+              ),
+            ),
+          ],
+        ),
+        if (maxTags != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            '${tags.value.length}/$maxTags tags',
+            style: TextStyle(
+              color: theme.onSurface.withValues(alpha: 0.5),
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Switch component
+class _SwitchComponent extends HookWidget {
+  final UIComponent component;
+  final ExecutionContext context;
+  final Function(String, dynamic) onValueChanged;
+  final ThemeConfig theme;
+
+  const _SwitchComponent({
+    required this.component,
+    required this.context,
+    required this.onValueChanged,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isOn = useState(false);  // Start with false
+    
+    final label = component.properties['label'] ?? 'Switch';
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: theme.onBackground,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Switch(
+          value: isOn.value,
+          onChanged: (value) {
+            isOn.value = value;
+            if (component.variableBinding != null) {
+              onValueChanged(component.variableBinding!, value);
+            }
+          },
+          activeColor: theme.primary,
+          activeTrackColor: theme.primary.withValues(alpha: 0.5),
+          inactiveThumbColor: theme.onSurface.withValues(alpha: 0.6),
+          inactiveTrackColor: theme.onSurface.withValues(alpha: 0.2),
+        ),
+      ],
+    );
+  }
+}
+
 /// Description text component (now handles both title and content)
 class _DescriptionTextComponent extends StatelessWidget {
   final UIComponent component;
@@ -1697,6 +1944,66 @@ class _PromptComponent extends StatelessWidget {
     // Prompt components are not visible during runtime
     // They are used only during prompt generation
     return const SizedBox.shrink();
+  }
+}
+
+/// Coming soon component placeholder
+class _ComingSoonComponent extends StatelessWidget {
+  final UIComponent component;
+  final ThemeConfig theme;
+  final String message;
+
+  const _ComingSoonComponent({
+    required this.component,
+    required this.theme,
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.surface.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: theme.onSurface.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.schedule,
+            color: theme.onSurface.withValues(alpha: 0.4),
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  message,
+                  style: TextStyle(
+                    color: theme.onSurface.withValues(alpha: 0.6),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Component: ${component.type.toString().split('.').last}',
+                  style: TextStyle(
+                    color: theme.onSurface.withValues(alpha: 0.4),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
