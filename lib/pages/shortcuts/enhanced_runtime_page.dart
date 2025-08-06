@@ -462,15 +462,27 @@ class EnhancedRuntimePage extends HookWidget {
         prompt: generatedPrompt.value!,
         executionContext: executionContext.value!,
         onReset: () {
+          // Reset all state
           generatedPrompt.value = null;
           currentStepIndex.value = 0;
+          
+          // Regenerate steps to clear any dynamic branch steps
+          steps.value = StepGenerator.generateSteps(shortcut.value!);
+          
+          // Reinitialize execution context
           executionContext.value = ExecutionContext(
             shortcutId: shortcut.value!.id,
             currentScreenId: shortcut.value!.startScreenId,
           );
           initializeVariables(shortcut.value!, executionContext.value!);
           processTextVariables(shortcut.value!, executionContext.value!);
-          pageController.jumpToPage(0);
+          
+          // Delay PageController operation until PageView is rebuilt
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (pageController.hasClients) {
+              pageController.jumpToPage(0);
+            }
+          });
         },
       );
     }
