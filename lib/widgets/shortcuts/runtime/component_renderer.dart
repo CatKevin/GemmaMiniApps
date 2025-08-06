@@ -2329,24 +2329,11 @@ class _CompositeComponentRenderer extends HookWidget {
             ],
           ),
         ),
-        // Render children components or show message if empty
+        // Render children components or return empty if none
         if (section.children.isEmpty) ...[
-          Container(
-            margin: const EdgeInsets.only(left: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.surface.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              'No components in this section',
-              style: TextStyle(
-                color: theme.onSurface.withValues(alpha: 0.5),
-                fontSize: 14,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ),
+          // Return empty container instead of showing a message
+          // This allows the runtime to handle empty branches seamlessly
+          const SizedBox.shrink(),
         ] else ...[
           Container(
             margin: const EdgeInsets.only(left: 16),

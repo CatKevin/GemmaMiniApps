@@ -367,8 +367,92 @@ class EnhancedRuntimePage extends HookWidget {
       
       if (currentStepIndex.value < steps.value.length - 1) {
         HapticFeedback.lightImpact();
-        currentStepIndex.value++;
-        pageController.nextPage(
+        
+        // Check if next step is IF-ELSE with empty branch that should be skipped
+        int nextIndex = currentStepIndex.value + 1;
+        while (nextIndex < steps.value.length) {
+          final nextStep = steps.value[nextIndex];
+          
+          // Check if this is an IF-ELSE that needs dynamic evaluation
+          if (nextStep.metadata?['compositeType'] == 'CompositeComponentType.ifElse' &&
+              nextStep.metadata?['requiresDynamicEvaluation'] == true &&
+              nextStep.components.isNotEmpty) {
+            // Evaluate the IF-ELSE condition to determine which branch to take
+            final component = nextStep.components.first;
+            final compositeData = component.properties['compositeData'] as Map<String, dynamic>?;
+            
+            if (compositeData != null) {
+              final sections = compositeData['sections'] as List?;
+              if (sections != null) {
+                // Evaluate condition
+                final condition = sections.firstWhere(
+                  (s) => s['label'] == 'IF',
+                  orElse: () => {'properties': {'expression': ''}},
+                )['properties']['expression'] ?? '';
+                
+                final isTrue = executionContext.value?.evaluateCondition(condition) ?? false;
+                
+                // Check if the selected branch is empty
+                String targetBranch = isTrue ? 'THEN' : 'ELSE';
+                
+                // Check for ELSE IF branches if condition is false
+                if (!isTrue) {
+                  for (final section in sections) {
+                    if (section['label'] == 'ELSE IF') {
+                      final elseIfCondition = section['properties']['expression'] ?? '';
+                      if (executionContext.value?.evaluateCondition(elseIfCondition) ?? false) {
+                        targetBranch = 'ELSE IF';
+                        break;
+                      }
+                    }
+                  }
+                }
+                
+                // Find the target branch and check if it's empty
+                final targetSection = sections.firstWhere(
+                  (s) => s['label'] == targetBranch,
+                  orElse: () => {'children': []},
+                );
+                
+                final children = targetSection['children'] as List? ?? [];
+                if (children.isEmpty) {
+                  // Skip this step as the branch is empty
+                  nextIndex++;
+                  continue;
+                }
+                
+                // Check if all children are variable-only
+                bool allVariableOnly = true;
+                for (final child in children) {
+                  if (child is Map<String, dynamic>) {
+                    final childComponent = child['component'] as Map<String, dynamic>?;
+                    if (childComponent != null) {
+                      final type = childComponent['type'] as String?;
+                      // Check if it's not a variable-only component
+                      if (type != 'text' && type != 'variableAssignment' && type != 'variableTransform') {
+                        allVariableOnly = false;
+                        break;
+                      }
+                    }
+                  }
+                }
+                
+                if (allVariableOnly) {
+                  // Skip this step as it only has variable assignments
+                  nextIndex++;
+                  continue;
+                }
+              }
+            }
+          }
+          
+          // This step should be shown
+          break;
+        }
+        
+        currentStepIndex.value = nextIndex;
+        pageController.animateToPage(
+          currentStepIndex.value,
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeOutCubic,
         );

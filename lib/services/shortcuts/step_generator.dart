@@ -130,7 +130,10 @@ class StepGenerator {
       ));
     }
     
-    return steps;
+    // Filter out any skip markers before returning
+    final filteredSteps = steps.where((step) => step.metadata?['skip'] != true).toList();
+    
+    return filteredSteps;
   }
   
   /// Flatten all components from all screens
@@ -181,10 +184,16 @@ class StepGenerator {
     final compositeData = component.properties['compositeData'] as Map<String, dynamic>?;
     if (compositeData == null) return false;
     
+    final compositeType = compositeData['type'] ?? '';
     final sections = compositeData['sections'] as List?;
     if (sections == null) return false;
     
-    // Check each section for visible components
+    // For IF-ELSE, check if ANY branch has visible components
+    if (compositeType == 'CompositeComponentType.ifElse' || compositeType == 'ifElse') {
+      return _ifElseHasVisibleBranch(sections);
+    }
+    
+    // For other composite types, check all sections
     for (final section in sections) {
       if (section is Map<String, dynamic>) {
         final children = section['children'] as List?;
@@ -209,6 +218,36 @@ class StepGenerator {
     return false; // No visible components found
   }
   
+  /// Check if IF-ELSE has at least one branch with visible components
+  static bool _ifElseHasVisibleBranch(List sections) {
+    // Check THEN, ELSE IF, and ELSE branches
+    for (final section in sections) {
+      if (section is Map<String, dynamic>) {
+        final label = section['label'] as String?;
+        // Only check actual branches, not IF/END IF markers
+        if (label == 'THEN' || label == 'ELSE' || label == 'ELSE IF') {
+          final children = section['children'] as List?;
+          if (children != null && children.isNotEmpty) {
+            // Check if any child is visible
+            for (final child in children) {
+              if (child is Map<String, dynamic>) {
+                final childComponent = child['component'] as Map<String, dynamic>?;
+                if (childComponent != null) {
+                  final uiComponent = UIComponent.fromJson(childComponent);
+                  if (!_isVariableOnlyComponent(uiComponent)) {
+                    return true; // Found at least one branch with visible components
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    return false; // No branch has visible components
+  }
+  
   /// Create step for composite component
   static RenderStep _createCompositeStep(UIComponent component) {
     final compositeData = component.properties['compositeData'] as Map<String, dynamic>?;
@@ -216,11 +255,35 @@ class StepGenerator {
     
     String title = 'Make Your Choice';
     String? subtitle;
+    bool requiresDynamicEvaluation = false;
     
     if (compositeType == 'CompositeComponentType.switchCase' || compositeType == 'switchCase') {
       final switchVar = compositeData?['switchVariable'] ?? '';
       title = _generateTitleFromVariable(switchVar);
       subtitle = 'Select one option to continue';
+      requiresDynamicEvaluation = true;
+    } else if (compositeType == 'CompositeComponentType.ifElse' || compositeType == 'ifElse') {
+      // For IF-ELSE, check if any branch is empty
+      final sections = compositeData?['sections'] as List?;
+      if (sections != null) {
+        final hasEmptyBranch = _ifElseHasEmptyBranch(sections);
+        if (hasEmptyBranch) {
+          requiresDynamicEvaluation = true;
+          // Don't create a visible step if ALL branches are empty
+          if (!_ifElseHasVisibleBranch(sections)) {
+            // Return a special marker step that will be filtered out
+            return RenderStep(
+              id: 'skip_${component.id}',
+              title: '',
+              components: [],
+              type: StepType.display,
+              metadata: {'skip': true},
+            );
+          }
+        }
+      }
+      title = 'Processing Logic';
+      subtitle = 'Evaluating conditions...';
     }
     
     return RenderStep(
@@ -231,11 +294,47 @@ class StepGenerator {
       type: StepType.selection,
       metadata: {
         'isComposite': true,
-        'compositeType': compositeType.contains('switchCase') ? 'CompositeComponentType.switchCase' : compositeType,
+        'compositeType': compositeType.contains('switchCase') ? 'CompositeComponentType.switchCase' : 
+                         compositeType.contains('ifElse') ? 'CompositeComponentType.ifElse' : compositeType,
         'requiresDynamicSteps': compositeType.contains('switchCase'), // True for switch-case
+        'requiresDynamicEvaluation': requiresDynamicEvaluation, // True for IF-ELSE with empty branches
         'componentId': component.id,
       },
     );
+  }
+  
+  /// Check if IF-ELSE has any empty branch
+  static bool _ifElseHasEmptyBranch(List sections) {
+    for (final section in sections) {
+      if (section is Map<String, dynamic>) {
+        final label = section['label'] as String?;
+        // Check actual branches
+        if (label == 'THEN' || label == 'ELSE' || label == 'ELSE IF') {
+          final children = section['children'] as List?;
+          if (children == null || children.isEmpty) {
+            return true; // Found an empty branch
+          }
+          // Check if all children are variable-only
+          bool allVariableOnly = true;
+          for (final child in children) {
+            if (child is Map<String, dynamic>) {
+              final childComponent = child['component'] as Map<String, dynamic>?;
+              if (childComponent != null) {
+                final uiComponent = UIComponent.fromJson(childComponent);
+                if (!_isVariableOnlyComponent(uiComponent)) {
+                  allVariableOnly = false;
+                  break;
+                }
+              }
+            }
+          }
+          if (allVariableOnly) {
+            return true; // Branch has only variable-only components
+          }
+        }
+      }
+    }
+    return false;
   }
   
   /// Generate steps for a specific switch-case branch
