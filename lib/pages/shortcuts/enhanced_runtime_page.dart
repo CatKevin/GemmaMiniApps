@@ -116,13 +116,10 @@ class EnhancedRuntimePage extends HookWidget {
     
     // Process template content helper
     String processTemplateContent(String content, ExecutionContext context) {
-      return content.replaceAllMapped(
-        RegExp(r'\{\{(\w+)\}\}'),
-        (match) {
-          final variableName = match.group(1)!;
-          final value = context.getVariable(variableName);
-          return value?.toString() ?? '{{$variableName}}';
-        },
+      // Use PromptBuilder to handle all template processing including conditionals
+      return PromptBuilder.buildPromptFromTemplate(
+        template: content,
+        context: context,
       );
     }
     
