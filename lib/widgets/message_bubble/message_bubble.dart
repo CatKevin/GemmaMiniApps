@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -8,12 +9,18 @@ class MessageBubble extends HookWidget {
   final String text;
   final bool isUser;
   final bool isTyping;
+  final bool isSystem;
+  final bool isError;
+  final List<Uint8List>? images;
 
   const MessageBubble({
     super.key,
     required this.text,
     required this.isUser,
     this.isTyping = false,
+    this.isSystem = false,
+    this.isError = false,
+    this.images,
   });
 
   @override
@@ -59,6 +66,31 @@ class MessageBubble extends HookWidget {
     return Obx(() {
       final theme = themeController.currentThemeConfig;
 
+      // System messages are centered
+      if (isSystem) {
+        return Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: theme.surface.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: theme.onSurface.withValues(alpha: 0.1),
+                width: 0.5,
+              ),
+            ),
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: theme.onSurface.withValues(alpha: 0.6),
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        );
+      }
+
       return Align(
         alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
         child: GestureDetector(
@@ -82,9 +114,11 @@ class MessageBubble extends HookWidget {
                       vertical: isTyping ? 16 : 14,
                     ),
                     decoration: BoxDecoration(
-                      color: isUser
-                          ? theme.messageBubbleUser
-                          : theme.messageBubbleAI,
+                      color: isError
+                          ? theme.error.withValues(alpha: 0.1)
+                          : isUser
+                              ? theme.messageBubbleUser
+                              : theme.messageBubbleAI,
                       borderRadius: BorderRadius.only(
                         topLeft: const Radius.circular(20),
                         topRight: const Radius.circular(20),
@@ -123,15 +157,26 @@ class MessageBubble extends HookWidget {
                     ),
                     child: isTyping
                         ? _buildTypingIndicator(typingController)
-                        : SelectableText(
-                            text,
-                            style:
-                                Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                      color: isUser
-                                          ? theme.onPrimary
-                                          : theme.onSurface.withValues(alpha: 0.9),
-                                      height: 1.4,
-                                    ),
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (images != null && images!.isNotEmpty) ...[
+                                _buildImageGrid(images!),
+                                if (text.isNotEmpty) const SizedBox(height: 8),
+                              ],
+                              if (text.isNotEmpty)
+                                SelectableText(
+                                  text,
+                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: isError
+                                        ? theme.error
+                                        : isUser
+                                            ? theme.onPrimary
+                                            : theme.onSurface.withValues(alpha: 0.9),
+                                    height: 1.4,
+                                  ),
+                                ),
+                            ],
                           ),
                   ),
                 ),
@@ -187,5 +232,57 @@ class MessageBubble extends HookWidget {
     } else {
       return 2 - (progress * 2);
     }
+  }
+
+  Widget _buildImageGrid(List<Uint8List> images) {
+    if (images.length == 1) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.memory(
+          images.first,
+          fit: BoxFit.cover,
+          width: double.infinity,
+        ),
+      );
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+      ),
+      itemCount: images.length > 4 ? 4 : images.length,
+      itemBuilder: (context, index) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.memory(
+                images[index],
+                fit: BoxFit.cover,
+              ),
+              if (index == 3 && images.length > 4)
+                Container(
+                  color: Colors.black54,
+                  child: Center(
+                    child: Text(
+                      '+${images.length - 4}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

@@ -1,15 +1,20 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:get/get.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import '../../core/theme/controllers/theme_controller.dart';
+import '../../services/gemma/image_picker_service.dart';
 
 class ChatInput extends HookWidget {
   final Function(String) onSendMessage;
   final bool enabled;
   final bool showToolbar;
   final bool isLoading;
+  final Function(Uint8List)? onAddImage;
+  final RxList<Uint8List>? selectedImages;
+  final Function(int)? onRemoveImage;
 
   const ChatInput({
     super.key,
@@ -17,6 +22,9 @@ class ChatInput extends HookWidget {
     this.enabled = true,
     this.showToolbar = false,
     this.isLoading = false,
+    this.onAddImage,
+    this.selectedImages,
+    this.onRemoveImage,
   });
 
   @override
@@ -97,7 +105,8 @@ class ChatInput extends HookWidget {
 
     void handleSend() async {
       final text = textController.text.trim();
-      if (text.isNotEmpty && enabled) {
+      final hasImages = selectedImages?.isNotEmpty ?? false;
+      if ((text.isNotEmpty || hasImages) && enabled) {
         // Haptic feedback
         HapticFeedback.selectionClick();
 
@@ -127,11 +136,112 @@ class ChatInput extends HookWidget {
             ),
             child: SafeArea(
               top: false,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Selected images preview
+                  if (selectedImages != null)
+                    Obx(() {
+                      if (selectedImages!.isEmpty) return const SizedBox.shrink();
+                      final theme = themeController.currentThemeConfig;
+                      return Container(
+                        height: 80,
+                        margin: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: selectedImages!.length,
+                          itemBuilder: (context, index) {
+                            return Container(
+                              margin: const EdgeInsets.only(right: 8),
+                              width: 80,
+                              height: 80,
+                              child: Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.memory(
+                                      selectedImages![index],
+                                      fit: BoxFit.cover,
+                                      width: 80,
+                                      height: 80,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 4,
+                                    right: 4,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        HapticFeedback.lightImpact();
+                                        onRemoveImage?.call(index);
+                                      },
+                                      child: Container(
+                                        width: 24,
+                                        height: 24,
+                                        decoration: BoxDecoration(
+                                          color: Colors.black54,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Icon(
+                                          Icons.close,
+                                          size: 16,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    }),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
+                    // Add image button
+                    if (onAddImage != null)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.only(right: 8, bottom: 1),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: enabled ? () async {
+                              HapticFeedback.lightImpact();
+                              final image = await ImagePickerService.pickImageFromGallery();
+                              if (image != null) {
+                                onAddImage!(image);
+                              }
+                            } : null,
+                            borderRadius: BorderRadius.circular(20),
+                            child: Obx(() {
+                              final theme = themeController.currentThemeConfig;
+                              return Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: theme.surface.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: theme.onSurface.withValues(alpha: 0.1),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.image_outlined,
+                                  size: 20,
+                                  color: enabled
+                                      ? theme.onSurface.withValues(alpha: 0.7)
+                                      : theme.onSurface.withValues(alpha: 0.3),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                      ),
                     // Main input container
                     Expanded(
                       child: Obx(() {
@@ -378,8 +488,10 @@ class ChatInput extends HookWidget {
                   ],
                 ),
               ),
+              ],
             ),
           ),
+        ),
         );
       },
     );

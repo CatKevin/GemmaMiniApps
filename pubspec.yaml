@@ -54,6 +54,14 @@ dependencies:
   # Local storage
   shared_preferences: ^2.3.4
   flutter_zoom_drawer: ^3.2.0
+  
+  # Network and file management
+  http: ^1.4.0
+  dio: ^5.8.0+1
+  path_provider: ^2.1.5 
+  permission_handler: ^12.0.1
+  file_picker: ^10.2.0
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
@@ -64,7 +72,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

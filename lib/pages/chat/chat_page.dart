@@ -9,6 +9,7 @@ import '../../widgets/chat_input/chat_input.dart';
 import '../../core/theme/controllers/theme_controller.dart';
 import '../../controllers/stack_navigation_controller.dart';
 import '../../controllers/chat/conversation_controller.dart';
+import '../../controllers/chat/gemma_chat_controller.dart';
 
 class ChatPage extends HookWidget {
   const ChatPage({super.key});
@@ -17,7 +18,17 @@ class ChatPage extends HookWidget {
   Widget build(BuildContext context) {
     final themeController = ThemeController.to;
     
-    // Get or initialize ConversationController
+    // Get or initialize GemmaChatController
+    GemmaChatController gemmaController;
+    try {
+      gemmaController = Get.find<GemmaChatController>();
+    } catch (e) {
+      // Initialize if not found
+      Get.put(GemmaChatController());
+      gemmaController = Get.find<GemmaChatController>();
+    }
+    
+    // Keep ConversationController for UI state
     ConversationController conversationController;
     try {
       conversationController = ConversationController.to;
@@ -36,7 +47,6 @@ class ChatPage extends HookWidget {
     }
 
     final scrollController = useScrollController();
-    final isTyping = useState(false);
     final scrollOffset = useState(0.0);
 
     // Animation controllers
@@ -61,19 +71,8 @@ class ChatPage extends HookWidget {
       // Haptic feedback
       HapticFeedback.lightImpact();
 
-      // Add user message to conversation
-      conversationController.addMessage(text, true);
-
-      // Simulate AI response
-      isTyping.value = true;
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        HapticFeedback.lightImpact();
-        isTyping.value = false;
-        conversationController.addMessage(
-          "Processing your request with advanced neural networks. This is a placeholder response showcasing the future of local AI processing.",
-          false,
-        );
-      });
+      // Use GemmaChatController to send real message
+      gemmaController.sendMessage(text);
     }
     
     // Check for pending prompts from Stack Navigation
@@ -227,7 +226,7 @@ class ChatPage extends HookWidget {
             // Message list
             Expanded(
               child: Obx(() {
-                final messages = conversationController.currentConversation.value?.messages ?? [];
+                final messages = gemmaController.messages;
                 return messages.isEmpty
                     ? Center(
                       child: ScaleTransition(
@@ -288,10 +287,10 @@ class ChatPage extends HookWidget {
                           bottom: 8,
                         ),
                         itemCount:
-                            messages.length + (isTyping.value ? 1 : 0),
+                            messages.length + (gemmaController.isGenerating.value ? 1 : 0),
                         itemBuilder: (context, index) {
                           // Show typing indicator
-                          if (isTyping.value && index == messages.length) {
+                          if (gemmaController.isGenerating.value && index == messages.length) {
                           return TweenAnimationBuilder<double>(
                             duration: const Duration(milliseconds: 400),
                             tween: Tween(begin: 0.0, end: 1.0),
@@ -322,6 +321,9 @@ class ChatPage extends HookWidget {
                                 child: MessageBubble(
                                   text: message.text,
                                   isUser: message.isUser,
+                                  isSystem: message.isSystem,
+                                  isError: message.isError,
+                                  images: message.images,
                                 ),
                               ),
                             );
@@ -358,9 +360,12 @@ class ChatPage extends HookWidget {
                     ),
                     child: ChatInput(
                       onSendMessage: sendMessage,
-                      enabled: !isTyping.value,
+                      enabled: !gemmaController.isGenerating.value && gemmaController.isModelReady.value,
                       showToolbar: false,
-                      isLoading: isTyping.value,
+                      isLoading: gemmaController.isGenerating.value,
+                      onAddImage: gemmaController.addImage,
+                      selectedImages: gemmaController.selectedImages,
+                      onRemoveImage: gemmaController.removeImage,
                     ),
                   ),
                 ),

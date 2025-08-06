@@ -5,6 +5,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:get/get.dart';
 import '../../core/theme/controllers/theme_controller.dart';
 import '../../controllers/chat/conversation_controller.dart';
+import '../../pages/routes.dart';
 import 'conversation_list.dart';
 
 /// The drawer menu that contains app info and conversation list
@@ -312,6 +313,72 @@ class DrawerMenu extends HookWidget {
               Expanded(
                 child: ConversationList(
                   onConversationSelected: onConversationSelected,
+                ),
+              ),
+              
+              // Bottom actions
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(
+                      color: theme.onBackground.withValues(alpha: 0.1),
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    // Model Manager button
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          Routes.toModelManagement();
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: theme.onBackground.withValues(alpha: 0.1),
+                              width: 1,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.storage,
+                                size: 20,
+                                color: theme.onBackground.withValues(alpha: 0.7),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Model Manager',
+                                style: TextStyle(
+                                  color: theme.onBackground.withValues(alpha: 0.9),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              const Spacer(),
+                              Icon(
+                                Icons.chevron_right,
+                                size: 20,
+                                color: theme.onBackground.withValues(alpha: 0.4),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

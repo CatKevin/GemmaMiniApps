@@ -37,8 +37,15 @@ if (flutterVersionName == null) {
 
 android {
     namespace = "com.example.gemma_mini_apps"
-    compileSdkVersion 34
+    compileSdkVersion 35
     ndkVersion "28.0.12674087"
+    
+    configurations.all {
+        resolutionStrategy {
+            force 'androidx.activity:activity:1.8.0'
+            force 'androidx.activity:activity-ktx:1.8.0'
+        }
+    }
 
     compileOptions {
         coreLibraryDesugaringEnabled true
@@ -59,8 +66,8 @@ android {
         applicationId = "io.secretai.llm"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdkVersion 23
-        targetSdkVersion flutter.targetSdkVersion
+        minSdkVersion 24
+        targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
@@ -95,5 +102,14 @@ dependencies {
     implementation 'androidx.window:window:1.0.0'
     implementation 'androidx.window:window-java:1.0.0'
     implementation "com.android.billingclient:billing:$billing_version"
+    
+    // Force androidx.activity to use version compatible with SDK 34
+    implementation 'androidx.activity:activity:1.8.0'
+    implementation 'androidx.activity:activity-ktx:1.8.0'
+    
+    // MediaPipe GenAI for LLM inference
+    implementation 'com.google.mediapipe:tasks-genai:0.10.25'
+    implementation 'com.google.mediapipe:tasks-vision:0.10.21'
+    
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.3'
 }

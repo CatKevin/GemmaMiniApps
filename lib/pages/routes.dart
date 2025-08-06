@@ -6,6 +6,7 @@ import 'shortcuts/shortcuts_page.dart';
 import 'shortcuts/enhanced_runtime_page.dart';
 import 'shortcuts/editor_page.dart';
 import 'shortcuts/basic_info_page.dart';
+import 'model_manager/model_manager_page.dart';
 
 // Route name constants
 abstract class Routes {
@@ -139,11 +140,13 @@ class AppPages {
     //   page: () => const SettingsPage(),
     //   transition: Transition.rightToLeft,
     // ),
-    // TODO: Add model management page
-    // GetPage(
-    //   name: Routes.modelManagement,
-    //   page: () => const ModelManagementPage(),
-    //   transition: Transition.rightToLeft,
-    // ),
+    
+    // Model management page
+    GetPage(
+      name: Routes.modelManagement,
+      page: () => const ModelManagerPage(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 200),
+    ),
   ];
 }
