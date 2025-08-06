@@ -247,10 +247,7 @@ class _OptimizedSwitchCaseRenderer extends HookWidget {
     // Start animation when widget is built
     useEffect(() {
       animationController.forward();
-      return () {
-        // Dispose animation controller properly
-        animationController.dispose();
-      };
+      return null;
     }, []);
     
     return Column(
