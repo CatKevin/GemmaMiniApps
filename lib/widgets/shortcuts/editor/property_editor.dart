@@ -78,10 +78,16 @@ class ComponentPropertyEditor extends HookWidget {
       text: component.properties[property.key]?.toString() ?? property.defaultValue?.toString() ?? '',
     );
     
+    // Make 'content' field multiline for descriptionText component
+    final isMultiline = property.key == 'content' && 
+                        component.type == ComponentType.descriptionText;
+    
     return TextField(
       controller: controller,
       onChanged: (value) => onPropertyChanged(property.key, value),
       style: TextStyle(color: theme.onSurface),
+      maxLines: isMultiline ? 5 : 1,
+      minLines: isMultiline ? 3 : 1,
       decoration: InputDecoration(
         labelText: property.label,
         labelStyle: TextStyle(

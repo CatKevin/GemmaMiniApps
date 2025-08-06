@@ -468,8 +468,7 @@ class StepGenerator {
   
   /// Check if component is a display component
   static bool _isDisplayComponent(UIComponent component) {
-    return component.type == ComponentType.titleText ||
-           component.type == ComponentType.descriptionText ||
+    return component.type == ComponentType.descriptionText ||
            component.type == ComponentType.image ||
            component.type == ComponentType.progressIndicator;
   }
@@ -516,14 +515,17 @@ class StepGenerator {
   
   /// Generate a meaningful title for the step
   static String _generateStepTitle(List<UIComponent> components) {
-    // Look for title components
-    final titleComponent = components.firstWhere(
-      (c) => c.type == ComponentType.titleText,
+    // Look for description components with title
+    final descComponent = components.firstWhere(
+      (c) => c.type == ComponentType.descriptionText && 
+             c.properties['title'] != null && 
+             c.properties['title'].toString().isNotEmpty,
       orElse: () => components.first,
     );
     
-    if (titleComponent.type == ComponentType.titleText) {
-      return titleComponent.properties['text'] ?? 'Information';
+    if (descComponent.type == ComponentType.descriptionText && 
+        descComponent.properties['title'] != null) {
+      return descComponent.properties['title'].toString();
     }
     
     // Generate based on component types

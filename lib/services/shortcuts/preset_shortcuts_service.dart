@@ -65,21 +65,13 @@ class PresetShortcutsService {
 
     // Create components
     final components = [
-      // Title
-      UIComponent(
-        id: 'title_1',
-        type: ComponentType.titleText,
-        properties: {
-          'text': 'AI Writing Assistant',
-          'size': 'large',
-        },
-      ),
-      // Description
+      // Title and Description
       UIComponent(
         id: 'desc_1',
         type: ComponentType.descriptionText,
         properties: {
-          'text': 'Let me help you create amazing content tailored to your needs.',
+          'title': 'AI Writing Assistant',
+          'content': 'Let me help you create amazing content tailored to your needs.',
         },
       ),
       // Topic input
@@ -379,10 +371,10 @@ class PresetShortcutsService {
     final components = [
       UIComponent(
         id: 'title_2',
-        type: ComponentType.titleText,
+        type: ComponentType.descriptionText,
         properties: {
-          'text': 'Customer Support Ticket System',
-          'size': 'large',
+          'title': 'Customer Support Ticket System',
+          'content': 'Create and manage support tickets efficiently',
         },
       ),
       UIComponent(
@@ -468,10 +460,10 @@ class PresetShortcutsService {
                     'id': 'urgent_priority',
                     'component': {
                       'id': 'urgent_priority_comp',
-                      'type': 'titleText',
+                      'type': 'descriptionText',
                       'properties': {
-                        'text': '🚨 HIGH PRIORITY TICKET',
-                        'size': 'medium',
+                        'title': '🚨 HIGH PRIORITY TICKET',
+                        'content': 'This ticket requires immediate attention',
                       },
                     },
                     'order': 1,
@@ -626,18 +618,11 @@ class PresetShortcutsService {
 
     final components = [
       UIComponent(
-        id: 'title_3',
-        type: ComponentType.titleText,
-        properties: {
-          'text': 'Product Review Generator',
-          'size': 'large',
-        },
-      ),
-      UIComponent(
         id: 'desc_3',
         type: ComponentType.descriptionText,
         properties: {
-          'text': 'Create comprehensive product reviews with detailed analysis',
+          'title': 'Product Review Generator',
+          'content': 'Create comprehensive product reviews with detailed analysis',
         },
       ),
       UIComponent(
@@ -811,10 +796,10 @@ class PresetShortcutsService {
     final components = [
       UIComponent(
         id: 'title_4',
-        type: ComponentType.titleText,
+        type: ComponentType.descriptionText,
         properties: {
-          'text': 'Personalized Learning Plan Builder',
-          'size': 'large',
+          'title': 'Personalized Learning Plan Builder',
+          'content': 'Create a customized learning plan tailored to your goals',
         },
       ),
       // Menu Logic for subject selection
@@ -1179,18 +1164,11 @@ class PresetShortcutsService {
 
     final components = [
       UIComponent(
-        id: 'title_5',
-        type: ComponentType.titleText,
-        properties: {
-          'text': 'Smart Code Generator',
-          'size': 'large',
-        },
-      ),
-      UIComponent(
         id: 'desc_5',
         type: ComponentType.descriptionText,
         properties: {
-          'text': 'Generate production-ready code with your specifications',
+          'title': 'Smart Code Generator',
+          'content': 'Generate production-ready code with your specifications',
         },
       ),
       UIComponent(

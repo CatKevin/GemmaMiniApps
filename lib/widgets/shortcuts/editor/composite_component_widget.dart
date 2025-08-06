@@ -1465,7 +1465,6 @@ class _DraggableChildWidget extends HookWidget {
       case ComponentType.tagSelect:
       case ComponentType.tagInput:
         return Icons.label;
-      case ComponentType.titleText:
       case ComponentType.descriptionText:
         return Icons.text_snippet;
       case ComponentType.image:

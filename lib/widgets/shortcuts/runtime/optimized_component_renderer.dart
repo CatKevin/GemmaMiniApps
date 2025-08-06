@@ -102,8 +102,7 @@ class OptimizedComponentRenderer {
     );
     
     // Skip enhancement for certain component types
-    if (component.type == ComponentType.titleText ||
-        component.type == ComponentType.descriptionText) {
+    if (component.type == ComponentType.descriptionText) {
       return baseWidget;
     }
     

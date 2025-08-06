@@ -641,46 +641,26 @@ class ComponentTemplateLibrary {
     
     // Display Components
     ComponentTemplate(
-      id: 'title-text',
-      name: 'Title Text',
-      description: 'Display title text',
-      icon: Icons.title,
-      category: ComponentCategory.display,
-      type: ComponentType.titleText,
-      defaultProperties: {
-        'text': 'Title',
-        'size': 'large',
-      },
-      editableProperties: [
-        ComponentProperty(
-          key: 'text',
-          label: 'Title Text',
-          type: PropertyType.text,
-          required: true,
-        ),
-        ComponentProperty(
-          key: 'size',
-          label: 'Size',
-          type: PropertyType.select,
-          defaultValue: 'large',
-          options: ['small', 'medium', 'large'],
-        ),
-      ],
-    ),
-    ComponentTemplate(
       id: 'description-text',
       name: 'Description Text',
-      description: 'Display description text',
+      description: 'Display title and description text',
       icon: Icons.description,
       category: ComponentCategory.display,
       type: ComponentType.descriptionText,
       defaultProperties: {
-        'text': 'Description',
+        'title': '',
+        'content': 'Enter your description here',
       },
       editableProperties: [
         ComponentProperty(
-          key: 'text',
-          label: 'Description Text',
+          key: 'title',
+          label: 'Title (Optional)',
+          type: PropertyType.text,
+          required: false,
+        ),
+        ComponentProperty(
+          key: 'content',
+          label: 'Content',
           type: PropertyType.text,
           required: true,
         ),
@@ -781,10 +761,10 @@ class ShortcutTemplates {
       components: [
         UIComponent(
           id: 'title',
-          type: ComponentType.titleText,
+          type: ComponentType.descriptionText,
           properties: {
-            'text': 'Please fill out the form',
-            'size': 'large',
+            'title': 'Please fill out the form',
+            'content': 'Complete all required fields below',
           },
         ),
         UIComponent(
@@ -829,10 +809,10 @@ class ShortcutTemplates {
       components: [
         UIComponent(
           id: 'title',
-          type: ComponentType.titleText,
+          type: ComponentType.descriptionText,
           properties: {
-            'text': 'Let\'s find the best option for you',
-            'size': 'large',
+            'title': 'Let\'s find the best option for you',
+            'content': 'Answer a few questions to get personalized recommendations',
           },
         ),
         UIComponent(
@@ -863,10 +843,10 @@ class ShortcutTemplates {
       components: [
         UIComponent(
           id: 'title',
-          type: ComponentType.titleText,
+          type: ComponentType.descriptionText,
           properties: {
-            'text': 'Customer Satisfaction Survey',
-            'size': 'large',
+            'title': 'Customer Satisfaction Survey',
+            'content': 'Help us improve by sharing your feedback',
           },
         ),
         UIComponent(
@@ -908,10 +888,10 @@ class ShortcutTemplates {
       components: [
         UIComponent(
           id: 'title',
-          type: ComponentType.titleText,
+          type: ComponentType.descriptionText,
           properties: {
-            'text': 'AI Content Generator',
-            'size': 'large',
+            'title': 'AI Content Generator',
+            'content': 'Create high-quality content with AI assistance',
           },
         ),
         UIComponent(

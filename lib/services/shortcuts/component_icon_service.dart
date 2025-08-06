@@ -39,8 +39,6 @@ class ComponentIconService {
         return Icons.local_offer;
       
       // Display components
-      case ComponentType.titleText:
-        return Icons.title;
       case ComponentType.descriptionText:
         return Icons.description;
       case ComponentType.image:
@@ -187,7 +185,6 @@ class ComponentIconService {
 
   static bool _isDisplayComponent(ComponentType type) {
     return [
-      ComponentType.titleText,
       ComponentType.descriptionText,
       ComponentType.image,
       ComponentType.progressIndicator,
@@ -309,8 +306,6 @@ class ComponentIconService {
         return 'Tag Select';
       case ComponentType.tagInput:
         return 'Tag Input';
-      case ComponentType.titleText:
-        return 'Title Text';
       case ComponentType.descriptionText:
         return 'Description Text';
       case ComponentType.image:

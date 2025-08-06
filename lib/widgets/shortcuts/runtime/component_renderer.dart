@@ -107,13 +107,6 @@ class ComponentRenderer {
         );
 
       // Display Components
-      case ComponentType.titleText:
-        return _TitleTextComponent(
-          component: component,
-          context: context,
-          theme: theme,
-        );
-
       case ComponentType.descriptionText:
         return _DescriptionTextComponent(
           component: component,
@@ -1123,66 +1116,7 @@ class _TagSelectComponent extends HookWidget {
   }
 }
 
-/// Title text component
-class _TitleTextComponent extends StatelessWidget {
-  final UIComponent component;
-  final ExecutionContext context;
-  final ThemeConfig theme;
-
-  const _TitleTextComponent({
-    required this.component,
-    required this.context,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final text = _interpolateText(
-      component.properties['text'] ?? 'Title',
-      this.context,
-    );
-    final size = component.properties['size'] ?? 'medium';
-
-    double fontSize;
-    switch (size) {
-      case 'large':
-        fontSize = 24;
-        break;
-      case 'small':
-        fontSize = 16;
-        break;
-      default:
-        fontSize = 20;
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: theme.onBackground,
-          fontSize: fontSize,
-          fontWeight: FontWeight.w600,
-          height: 1.3,
-        ),
-      ),
-    );
-  }
-
-  String _interpolateText(String template, ExecutionContext context) {
-    // Simple variable interpolation: replace {{variable}} with value
-    return template.replaceAllMapped(
-      RegExp(r'\{\{(\w+)\}\}'),
-      (match) {
-        final variableName = match.group(1)!;
-        final value = context.getVariable(variableName);
-        return value?.toString() ?? '';
-      },
-    );
-  }
-}
-
-/// Description text component
+/// Description text component (now handles both title and content)
 class _DescriptionTextComponent extends StatelessWidget {
   final UIComponent component;
   final ExecutionContext context;
@@ -1196,20 +1130,48 @@ class _DescriptionTextComponent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = _interpolateText(
-      component.properties['text'] ?? 'Description',
+    // Handle both old 'text' property and new 'title'/'content' properties for backward compatibility
+    final title = _interpolateText(
+      component.properties['title']?.toString() ?? '',
+      this.context,
+    );
+    
+    // Support both 'content' (new) and 'text' (old) for backward compatibility
+    final content = _interpolateText(
+      component.properties['content']?.toString() ?? 
+      component.properties['text']?.toString() ?? 
+      'Description',
       this.context,
     );
 
+    final hasTitle = title.isNotEmpty;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: theme.onBackground.withValues(alpha: 0.8),
-          fontSize: 14,
-          height: 1.5,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (hasTitle) ...[
+            Text(
+              title,
+              style: TextStyle(
+                color: theme.onBackground,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                height: 1.3,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          Text(
+            content,
+            style: TextStyle(
+              color: theme.onBackground.withValues(alpha: 0.8),
+              fontSize: 14,
+              height: 1.5,
+            ),
+          ),
+        ],
       ),
     );
   }

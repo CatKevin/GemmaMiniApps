@@ -282,7 +282,6 @@ enum ComponentType {
   tagInput,
   
   // Display components
-  titleText,
   descriptionText,
   image,
   progressIndicator,
