@@ -63,8 +63,12 @@ class GemmaService {
           _responseController?.add(response);
           
           if (response.isDone) {
-            print('✅ Response complete, closing stream controller');
-            _responseController?.close();
+            print('✅ Response complete, will close stream controller after delay');
+            // Add a small delay before closing to ensure the last message is processed
+            Future.delayed(const Duration(milliseconds: 100), () {
+              _responseController?.close();
+              print('🔒 Stream controller closed');
+            });
           }
         } else {
           print('⚠️ Event is not a Map: ${event.runtimeType}');

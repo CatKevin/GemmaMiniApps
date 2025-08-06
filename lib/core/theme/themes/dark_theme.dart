@@ -30,12 +30,12 @@ class DarkTheme {
     shadowColor: Color(0xFF000000),
     glowColor: Color(0xFFFFFFFF),
     
-    // Opacity values
-    borderOpacity: 0.2,
-    borderOpacityFocused: 0.5,
-    hintOpacity: 0.5,
-    iconOpacity: 0.5,
-    shadowOpacity: 0.1,
+    // Opacity values - Increased for better visibility
+    borderOpacity: 0.4,
+    borderOpacityFocused: 0.8,
+    hintOpacity: 0.6,
+    iconOpacity: 0.8,
+    shadowOpacity: 0.15,
   );
 
   static ThemeData get themeData => config.toThemeData(brightness: Brightness.dark);

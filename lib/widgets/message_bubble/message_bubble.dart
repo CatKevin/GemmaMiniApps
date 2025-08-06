@@ -27,6 +27,12 @@ class MessageBubble extends HookWidget {
   Widget build(BuildContext context) {
     final themeController = ThemeController.to;
 
+    // Debug logging
+    useEffect(() {
+      print('DEBUG MessageBubble: text="$text", isUser=$isUser, images=${images?.length ?? 0}');
+      return null;
+    }, [text, isUser, images]);
+
     // Animation controller for press effect
     final scaleController = useAnimationController(
       duration: const Duration(milliseconds: 100),
@@ -161,7 +167,12 @@ class MessageBubble extends HookWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (images != null && images!.isNotEmpty) ...[
-                                _buildImageGrid(images!),
+                                Builder(
+                                  builder: (context) {
+                                    print('DEBUG MessageBubble: Building image grid with ${images!.length} images');
+                                    return _buildImageGrid(images!);
+                                  },
+                                ),
                                 if (text.isNotEmpty) const SizedBox(height: 8),
                               ],
                               if (text.isNotEmpty)
@@ -235,17 +246,36 @@ class MessageBubble extends HookWidget {
   }
 
   Widget _buildImageGrid(List<Uint8List> images) {
+    print('DEBUG MessageBubble._buildImageGrid: Building grid with ${images.length} images');
+    
+    if (images.isEmpty) {
+      print('DEBUG MessageBubble._buildImageGrid: No images to display');
+      return const SizedBox.shrink();
+    }
+
     if (images.length == 1) {
+      print('DEBUG MessageBubble._buildImageGrid: Displaying single image');
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: Image.memory(
           images.first,
           fit: BoxFit.cover,
           width: double.infinity,
+          errorBuilder: (context, error, stackTrace) {
+            print('ERROR MessageBubble: Failed to display single image: $error');
+            return Container(
+              height: 200,
+              color: Colors.grey[300],
+              child: const Center(
+                child: Icon(Icons.broken_image, size: 50, color: Colors.grey),
+              ),
+            );
+          },
         ),
       );
     }
 
+    print('DEBUG MessageBubble._buildImageGrid: Displaying grid of ${images.length} images');
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -264,6 +294,15 @@ class MessageBubble extends HookWidget {
               Image.memory(
                 images[index],
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  print('ERROR MessageBubble: Failed to display image at index $index: $error');
+                  return Container(
+                    color: Colors.grey[300],
+                    child: const Center(
+                      child: Icon(Icons.broken_image, size: 30, color: Colors.grey),
+                    ),
+                  );
+                },
               ),
               if (index == 3 && images.length > 4)
                 Container(

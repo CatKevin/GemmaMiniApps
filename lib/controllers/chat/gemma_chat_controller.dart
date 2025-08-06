@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:get/get.dart';
 import '../../services/gemma/gemma_service.dart';
@@ -7,6 +8,7 @@ import '../../models/gemma/models.dart';
 class GemmaChatController extends GetxController {
   final GemmaService _gemmaService = GemmaService();
   final ModelManagerService _modelManager = ModelManagerService();
+  StreamSubscription<GemmaResponse>? _responseSubscription;
   
   // Observable states
   final isModelReady = false.obs;
@@ -53,6 +55,8 @@ class GemmaChatController extends GetxController {
     if (text.trim().isEmpty && selectedImages.isEmpty) return;
     if (!isModelReady.value || isGenerating.value) return;
     
+    print('DEBUG: Starting sendMessage with text: "$text" and ${selectedImages.length} images');
+    
     // Add user message
     final userMessage = ChatMessage(
       text: text,
@@ -60,9 +64,11 @@ class GemmaChatController extends GetxController {
       isUser: true,
     );
     messages.add(userMessage);
+    print('DEBUG: Added user message with ${userMessage.images?.length ?? 0} images');
     
     // Clear selected images
     selectedImages.clear();
+    print('DEBUG: Cleared selected images');
     
     // Add placeholder for AI response
     final aiMessage = ChatMessage(
@@ -70,49 +76,67 @@ class GemmaChatController extends GetxController {
       isUser: false,
     );
     messages.add(aiMessage);
+    final aiMessageIndex = messages.length - 1; // Store index for proper updates
     
     isGenerating.value = true;
     
     try {
+      // Cancel any previous subscription
+      await _responseSubscription?.cancel();
+      
       // Generate response stream
-      _gemmaService.generateResponse(
+      _responseSubscription = _gemmaService.generateResponse(
         text,
         images: userMessage.images,
       ).listen(
         (response) {
-          // Update the last message with accumulated text
-          if (messages.isNotEmpty && !messages.last.isUser) {
-            messages.last = ChatMessage(
+          // Update the AI message using index to ensure reactive updates
+          if (aiMessageIndex < messages.length && !messages[aiMessageIndex].isUser) {
+            final updatedMessage = ChatMessage(
               text: response.text,
               isUser: false,
             );
+            messages[aiMessageIndex] = updatedMessage;
+            messages.refresh(); // Explicitly trigger refresh
           }
           
           if (response.isDone) {
-            isGenerating.value = false;
+            // Don't set isGenerating to false here, wait for onDone
+            print('DEBUG: Response marked as done, waiting for stream completion');
           }
         },
         onError: (error) {
           isGenerating.value = false;
-          // Update the last message with error
-          if (messages.isNotEmpty && !messages.last.isUser) {
-            messages.last = ChatMessage(
+          print('DEBUG: AI response error: $error');
+          // Update the AI message with error using index
+          if (aiMessageIndex < messages.length && !messages[aiMessageIndex].isUser) {
+            final errorMessage = ChatMessage(
               text: 'Error: $error',
               isUser: false,
               isError: true,
             );
+            messages[aiMessageIndex] = errorMessage;
+            messages.refresh(); // Explicitly trigger refresh
           }
+        },
+        onDone: () {
+          // Stream has completed, now stop the loading animation
+          isGenerating.value = false;
+          print('DEBUG: Stream completed, loading animation stopped');
         },
       );
     } catch (e) {
       isGenerating.value = false;
-      // Update the last message with error
-      if (messages.isNotEmpty && !messages.last.isUser) {
-        messages.last = ChatMessage(
+      print('DEBUG: sendMessage catch error: $e');
+      // Update the AI message with error using index
+      if (aiMessageIndex < messages.length && !messages[aiMessageIndex].isUser) {
+        final errorMessage = ChatMessage(
           text: 'Error: $e',
           isUser: false,
           isError: true,
         );
+        messages[aiMessageIndex] = errorMessage;
+        messages.refresh(); // Explicitly trigger refresh
       }
     }
   }
@@ -138,14 +162,27 @@ class GemmaChatController extends GetxController {
   }
   
   void addImage(Uint8List image) {
+    print('DEBUG GemmaChatController.addImage: Called with image size ${image.length} bytes');
+    print('DEBUG GemmaChatController.addImage: Current selectedImages length: ${selectedImages.length}');
+    
     if (selectedImages.length < 5) { // Limit to 5 images
       selectedImages.add(image);
+      print('DEBUG GemmaChatController.addImage: Image added successfully. Total images: ${selectedImages.length}');
+      
+      // Force reactive update
+      selectedImages.refresh();
+      print('DEBUG GemmaChatController.addImage: Triggered refresh()');
+    } else {
+      print('DEBUG GemmaChatController.addImage: Cannot add image. Already at limit of 5 images');
     }
   }
   
   void removeImage(int index) {
     if (index >= 0 && index < selectedImages.length) {
       selectedImages.removeAt(index);
+      print('DEBUG: Image removed at index $index. Total images: ${selectedImages.length}');
+    } else {
+      print('DEBUG: Cannot remove image at index $index. Invalid index');
     }
   }
   
@@ -153,8 +190,20 @@ class GemmaChatController extends GetxController {
     selectedImages.clear();
   }
   
+  Future<void> stopGeneration() async {
+    if (!isGenerating.value) return;
+    
+    await _responseSubscription?.cancel();
+    _responseSubscription = null;
+    await _gemmaService.stopGeneration();
+    
+    isGenerating.value = false;
+    print('DEBUG: Generation stopped by user');
+  }
+  
   @override
   void onClose() {
+    _responseSubscription?.cancel();
     _modelManager.removeListener(_onModelManagerUpdate);
     _gemmaService.cleanup();
     super.onClose();

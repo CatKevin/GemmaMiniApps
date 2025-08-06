@@ -18,15 +18,16 @@ class ChatPage extends HookWidget {
   Widget build(BuildContext context) {
     final themeController = ThemeController.to;
     
-    // Get or initialize GemmaChatController
-    GemmaChatController gemmaController;
-    try {
-      gemmaController = Get.find<GemmaChatController>();
-    } catch (e) {
-      // Initialize if not found
-      Get.put(GemmaChatController());
-      gemmaController = Get.find<GemmaChatController>();
-    }
+    // Get or initialize GemmaChatController using useEffect for proper lifecycle
+    final gemmaController = useMemoized(() {
+      try {
+        return Get.find<GemmaChatController>();
+      } catch (e) {
+        // Initialize if not found
+        Get.put(GemmaChatController());
+        return Get.find<GemmaChatController>();
+      }
+    });
     
     // Keep ConversationController for UI state
     ConversationController conversationController;
@@ -66,12 +67,13 @@ class ChatPage extends HookWidget {
     
     // Define sendMessage function before using it
     void sendMessage(String text) {
-      if (text.trim().isEmpty) return;
+      // Check if there's text or images to send
+      if (text.trim().isEmpty && gemmaController.selectedImages.isEmpty) return;
 
       // Haptic feedback
       HapticFeedback.lightImpact();
 
-      // Use GemmaChatController to send real message
+      // Use GemmaChatController to send real message (it handles selectedImages automatically)
       gemmaController.sendMessage(text);
     }
     
@@ -358,7 +360,7 @@ class ChatPage extends HookWidget {
                         ),
                       ],
                     ),
-                    child: ChatInput(
+                    child: Obx(() => ChatInput(
                       onSendMessage: sendMessage,
                       enabled: !gemmaController.isGenerating.value && gemmaController.isModelReady.value,
                       showToolbar: false,
@@ -366,7 +368,7 @@ class ChatPage extends HookWidget {
                       onAddImage: gemmaController.addImage,
                       selectedImages: gemmaController.selectedImages,
                       onRemoveImage: gemmaController.removeImage,
-                    ),
+                    )),
                   ),
                 ),
               ),

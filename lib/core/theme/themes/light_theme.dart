@@ -10,13 +10,13 @@ class LightTheme {
     onSecondary: Color(0xFFFFFFFF),
     surface: Color(0xFFF5F5F5), // Off white
     onSurface: Color(0xFF404040), // Gray
-    background: Color(0xFFFFFFFF), // Pure white
+    background: Color(0xFFFAFAFA), // Softer white, less harsh
     onBackground: Color(0xFF000000), // Pure black
     error: Color(0xFF000000),
     onError: Color(0xFFFFFFFF),
     
     // Extended colors
-    inputBackground: Color(0xFFFFFFFF),
+    inputBackground: Color(0xFFFDFDFD), // Slightly toned down white
     inputBorder: Color(0xFF000000),
     inputBorderFocused: Color(0xFF000000),
     inputText: Color(0xFF000000),
@@ -30,12 +30,12 @@ class LightTheme {
     shadowColor: Color(0xFF000000),
     glowColor: Color(0xFF000000),
     
-    // Opacity values
-    borderOpacity: 0.15,
-    borderOpacityFocused: 0.4,
-    hintOpacity: 0.5,
-    iconOpacity: 0.5,
-    shadowOpacity: 0.08,
+    // Opacity values - Increased for better visibility
+    borderOpacity: 0.3,
+    borderOpacityFocused: 0.7,
+    hintOpacity: 0.6,
+    iconOpacity: 0.8,
+    shadowOpacity: 0.12,
   );
 
   static ThemeData get themeData => config.toThemeData(brightness: Brightness.light);

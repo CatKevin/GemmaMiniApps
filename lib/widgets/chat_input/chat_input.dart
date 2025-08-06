@@ -145,54 +145,160 @@ class ChatInput extends HookWidget {
                       if (selectedImages!.isEmpty) return const SizedBox.shrink();
                       final theme = themeController.currentThemeConfig;
                       return Container(
-                        height: 80,
                         margin: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: selectedImages!.length,
-                          itemBuilder: (context, index) {
-                            return Container(
-                              margin: const EdgeInsets.only(right: 8),
-                              width: 80,
-                              height: 80,
-                              child: Stack(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Image count indicator with Add more button
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
                                 children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Image.memory(
-                                      selectedImages![index],
-                                      fit: BoxFit.cover,
-                                      width: 80,
-                                      height: 80,
+                                  Icon(
+                                    Icons.image,
+                                    size: 16,
+                                    color: theme.primary,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '${selectedImages!.length} image${selectedImages!.length == 1 ? '' : 's'} selected',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: theme.primary,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                  Positioned(
-                                    top: 4,
-                                    right: 4,
-                                    child: GestureDetector(
-                                      onTap: () {
+                                  const Spacer(),
+                                  if (selectedImages!.length < 5)
+                                    GestureDetector(
+                                      onTap: () async {
                                         HapticFeedback.lightImpact();
-                                        onRemoveImage?.call(index);
+                                        final images = await ImagePickerService.showImageSourceDialog(context);
+                                        if (images.isNotEmpty) {
+                                          for (final image in images) {
+                                            if (selectedImages!.length < 5) {
+                                              onAddImage!(image);
+                                            }
+                                          }
+                                        }
                                       },
                                       child: Container(
-                                        width: 24,
-                                        height: 24,
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: Colors.black54,
+                                          color: theme.primary.withValues(alpha: 0.1),
                                           borderRadius: BorderRadius.circular(12),
                                         ),
-                                        child: const Icon(
-                                          Icons.close,
-                                          size: 16,
-                                          color: Colors.white,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.add,
+                                              size: 14,
+                                              color: theme.primary,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Add more',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: theme.primary,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
-                                  ),
                                 ],
                               ),
-                            );
-                          },
+                            ),
+                            // Image thumbnails with preview on tap
+                            SizedBox(
+                              height: 80,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: selectedImages!.length,
+                                itemBuilder: (context, index) {
+                                  return Container(
+                                    margin: EdgeInsets.only(right: index < selectedImages!.length - 1 ? 8 : 0),
+                                    width: 80,
+                                    height: 80,
+                                    child: Stack(
+                                      children: [
+                                        // Image with tap to preview
+                                        GestureDetector(
+                                          onTap: () {
+                                            // Show full screen preview like demo project
+                                            showDialog(
+                                              context: context,
+                                              barrierColor: Colors.black87,
+                                              builder: (context) => Dialog.fullscreen(
+                                                backgroundColor: Colors.black,
+                                                child: Stack(
+                                                  children: [
+                                                    Center(
+                                                      child: InteractiveViewer(
+                                                        child: Image.memory(selectedImages![index]),
+                                                      ),
+                                                    ),
+                                                    Positioned(
+                                                      top: MediaQuery.of(context).padding.top + 8,
+                                                      right: 16,
+                                                      child: IconButton(
+                                                        icon: const Icon(
+                                                          Icons.close,
+                                                          color: Colors.white,
+                                                          size: 32,
+                                                        ),
+                                                        onPressed: () => Navigator.of(context).pop(),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: Image.memory(
+                                              selectedImages![index],
+                                              fit: BoxFit.cover,
+                                              width: 80,
+                                              height: 80,
+                                            ),
+                                          ),
+                                        ),
+                                        // Remove button
+                                        Positioned(
+                                          top: 4,
+                                          right: 4,
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              HapticFeedback.lightImpact();
+                                              onRemoveImage?.call(index);
+                                            },
+                                            child: Container(
+                                              width: 20,
+                                              height: 20,
+                                              decoration: BoxDecoration(
+                                                color: Colors.black.withValues(alpha: 0.7),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(
+                                                Icons.close,
+                                                color: Colors.white,
+                                                size: 14,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     }),
@@ -211,9 +317,18 @@ class ChatInput extends HookWidget {
                           child: InkWell(
                             onTap: enabled ? () async {
                               HapticFeedback.lightImpact();
-                              final image = await ImagePickerService.pickImageFromGallery();
-                              if (image != null) {
-                                onAddImage!(image);
+                              // Show image source dialog like demo project
+                              final images = await ImagePickerService.showImageSourceDialog(context);
+                              print('DEBUG ChatInput: Received ${images.length} images from picker');
+                              if (images.isNotEmpty) {
+                                for (int i = 0; i < images.length; i++) {
+                                  final image = images[i];
+                                  print('DEBUG ChatInput: Adding image ${i + 1}/${images.length}, size: ${image.length} bytes');
+                                  onAddImage!(image);
+                                }
+                                print('DEBUG ChatInput: All images added via onAddImage callback');
+                              } else {
+                                print('DEBUG ChatInput: No images to add');
                               }
                             } : null,
                             borderRadius: BorderRadius.circular(20),
@@ -223,18 +338,25 @@ class ChatInput extends HookWidget {
                                 width: 40,
                                 height: 40,
                                 decoration: BoxDecoration(
-                                  color: theme.surface.withValues(alpha: 0.5),
+                                  color: theme.surface.withValues(alpha: 0.8),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: theme.onSurface.withValues(alpha: 0.1),
+                                    color: theme.onSurface.withValues(alpha: 0.15),
                                     width: 1,
                                   ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: theme.shadowColor.withValues(alpha: 0.05),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
                                 child: Icon(
-                                  Icons.image_outlined,
-                                  size: 20,
+                                  Icons.add_photo_alternate_outlined,
+                                  size: 22,
                                   color: enabled
-                                      ? theme.onSurface.withValues(alpha: 0.7)
+                                      ? theme.primary
                                       : theme.onSurface.withValues(alpha: 0.3),
                                 ),
                               );
@@ -374,13 +496,13 @@ class ChatInput extends HookWidget {
 
                       return GestureDetector(
                         onTapDown: (_) {
-                          if (!isEmpty.value && enabled) {
+                          if (!isEmpty.value && enabled && !isLoading) {
                             isPressed.value = true;
                             sendButtonScaleController.forward();
                           }
                         },
                         onTapUp: (_) {
-                          if (!isEmpty.value && enabled) {
+                          if (!isEmpty.value && enabled && !isLoading) {
                             isPressed.value = false;
                             handleSend();
                           }
@@ -408,7 +530,7 @@ class ChatInput extends HookWidget {
                                       : isLoading
                                           ? theme.surface
                                           : theme.buttonSelected,
-                                  border: isEmpty.value || !enabled
+                                  border: isEmpty.value || !enabled || isLoading
                                       ? Border.all(
                                           color: theme.buttonBorder.withValues(
                                               alpha: isFocused.value
@@ -419,65 +541,65 @@ class ChatInput extends HookWidget {
                                       : null,
                                   boxShadow: isEmpty.value || !enabled
                                       ? null
-                                      : [
-                                          // Elevation shadow
-                                          BoxShadow(
-                                            color: theme.shadowColor.withValues(
-                                                alpha: isLoading ? 0.1 : 0.2),
-                                            blurRadius: 16,
-                                            offset: const Offset(0, 4),
-                                            spreadRadius: -8,
-                                          ),
-                                          // Glow effect
-                                          if (isPressed.value || isLoading)
-                                            BoxShadow(
-                                              color: theme.glowColor
-                                                  .withValues(alpha: 0.4),
-                                              blurRadius: 24,
-                                              spreadRadius: -8,
-                                            ),
-                                        ],
+                                      : isLoading
+                                          ? [
+                                              // Subtle shadow for loading state
+                                              BoxShadow(
+                                                color: theme.shadowColor.withValues(alpha: 0.1),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 2),
+                                                spreadRadius: -4,
+                                              ),
+                                              // Soft glow effect for loading
+                                              BoxShadow(
+                                                color: theme.glowColor.withValues(alpha: 0.2),
+                                                blurRadius: 16,
+                                                spreadRadius: -6,
+                                              ),
+                                            ]
+                                          : [
+                                              // Elevation shadow for active state
+                                              BoxShadow(
+                                                color: theme.shadowColor.withValues(alpha: 0.2),
+                                                blurRadius: 16,
+                                                offset: const Offset(0, 4),
+                                                spreadRadius: -8,
+                                              ),
+                                              // Glow effect when pressed
+                                              if (isPressed.value)
+                                                BoxShadow(
+                                                  color: theme.glowColor.withValues(alpha: 0.4),
+                                                  blurRadius: 24,
+                                                  spreadRadius: -8,
+                                                ),
+                                            ],
                                 ),
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    // Loading animation
-                                    if (isLoading)
-                                      LoadingAnimationWidget.staggeredDotsWave(
-                                        color: theme.onPrimary,
-                                        size: 20,
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  transitionBuilder: (child, animation) {
+                                    return FadeTransition(
+                                      opacity: animation,
+                                      child: ScaleTransition(
+                                        scale: animation,
+                                        child: child,
                                       ),
-                                    // Icon with fade transition
-                                    AnimatedSwitcher(
-                                      duration:
-                                          const Duration(milliseconds: 300),
-                                      transitionBuilder: (child, animation) {
-                                        return FadeTransition(
-                                          opacity: animation,
-                                          child: ScaleTransition(
-                                            scale: animation,
-                                            child: child,
-                                          ),
-                                        );
-                                      },
-                                      child: isLoading
-                                          ? const SizedBox(
-                                              key: ValueKey('loading'),
-                                              width: 20,
-                                              height: 20,
-                                            )
-                                          : Icon(
-                                              Icons.arrow_upward,
-                                              key: ValueKey(
-                                                  'arrow-${isEmpty.value}'),
-                                              size: 20,
-                                              color: isEmpty.value || !enabled
-                                                  ? theme.inputHint.withValues(
-                                                      alpha: theme.iconOpacity)
-                                                  : theme.onPrimary,
-                                            ),
-                                    ),
-                                  ],
+                                    );
+                                  },
+                                  child: isLoading
+                                      ? LoadingAnimationWidget.staggeredDotsWave(
+                                          key: const ValueKey('loading'),
+                                          color: theme.onSurface,
+                                          size: 20,
+                                        )
+                                      : Icon(
+                                          Icons.arrow_upward,
+                                          key: ValueKey('arrow-${isEmpty.value}'),
+                                          size: 20,
+                                          color: isEmpty.value || !enabled
+                                              ? theme.inputHint.withValues(
+                                                  alpha: theme.iconOpacity)
+                                              : theme.onPrimary,
+                                        ),
                                 ),
                               ),
                             );

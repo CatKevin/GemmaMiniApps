@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../core/theme/controllers/theme_controller.dart';
 import '../../services/gemma/model_manager_service.dart';
 import '../../models/gemma/models.dart';
+import '../../widgets/model_import_dialog.dart';
 
 class ModelManagerPage extends HookWidget {
   const ModelManagerPage({super.key});
@@ -149,59 +150,51 @@ class ModelManagerPage extends HookWidget {
   
   Future<void> _importModel(BuildContext context, ModelManagerService modelManager) async {
     try {
+      // Show immediate loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+      
+      // Small delay to ensure dialog is shown
+      await Future.delayed(const Duration(milliseconds: 100));
+      
       // Pick a model file
       final result = await FilePicker.platform.pickFiles(
         type: FileType.any,
         allowMultiple: false,
       );
       
+      // Close loading indicator
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+      
       if (result != null && result.files.single.path != null) {
         final file = File(result.files.single.path!);
-        final fileName = result.files.single.name;
         
-        // Create model config
-        final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-        final modelConfig = GemmaModel(
-          id: 'imported_$timestamp',
-          name: 'Imported Model',
-          modelId: 'local',
-          modelFile: fileName,
-          description: 'User imported model',
-          sizeInBytes: result.files.single.size,
-          estimatedPeakMemoryInBytes: result.files.single.size * 2,
-          commitHash: '',
-          supportsImage: false,
-          supportsAudio: false,
-          taskTypes: ['llm_chat'],
-          defaultConfig: ModelConfig(
-            maxTokens: 512,
-            topK: 40,
-            topP: 0.95,
-            temperature: 1.0,
-            accelerators: 'gpu',
-          ),
-          isImported: true,
-        );
-        
-        // Import the model
+        // Show import configuration dialog
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Importing model...')),
-          );
-        }
-        
-        final success = await modelManager.importModel(file, modelConfig);
-        
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(success ? 'Model imported successfully!' : 'Failed to import model'),
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => ModelImportDialog(
+              modelFile: file,
+              onImport: (model) {
+                // Model imported successfully, refresh the list
+                modelManager.initialize();
+              },
             ),
           );
         }
       }
     } catch (e) {
+      // Make sure to close loading indicator on error
       if (context.mounted) {
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e')),
         );
@@ -260,6 +253,84 @@ class _OfficialModelsList extends StatelessWidget {
   final ModelManagerService modelManager;
   
   const _OfficialModelsList({required this.modelManager});
+  
+  Future<void> _selectModel(BuildContext context, GemmaModel model, ModelManagerService modelManager) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text('Initializing ${model.name}...'),
+            ),
+          ],
+        ),
+      ),
+    );
+    
+    final success = await modelManager.selectModel(model.id);
+    
+    if (context.mounted) {
+      Navigator.pop(context); // Close loading dialog
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${model.name} selected successfully'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to initialize ${model.name}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+  
+  Future<void> _showDeleteConfirmation(BuildContext context, GemmaModel model, ModelManagerService modelManager) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Model'),
+        content: Text('Are you sure you want to delete ${model.name}?\n\nThis action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirm == true) {
+      await modelManager.deleteModel(model.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${model.name} deleted'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
   
   @override
   Widget build(BuildContext context) {
@@ -353,21 +424,29 @@ class _OfficialModelsList extends StatelessWidget {
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              Text(
-                                model.formattedSize,
-                                style: TextStyle(
-                                  color: theme.onBackground.withValues(alpha: 0.5),
-                                  fontSize: 11,
-                                ),
+                              _InfoChip(
+                                icon: Icons.storage,
+                                label: model.formattedSize,
                               ),
-                              const SizedBox(width: 16),
-                              Text(
-                                model.formattedMemory,
-                                style: TextStyle(
-                                  color: theme.onBackground.withValues(alpha: 0.5),
-                                  fontSize: 11,
-                                ),
+                              const SizedBox(width: 8),
+                              _InfoChip(
+                                icon: Icons.memory,
+                                label: model.formattedMemory,
                               ),
+                              if (model.supportsImage) ...[
+                                const SizedBox(width: 8),
+                                _InfoChip(
+                                  icon: Icons.image,
+                                  label: 'Image',
+                                ),
+                              ],
+                              if (model.supportsAudio) ...[
+                                const SizedBox(width: 8),
+                                _InfoChip(
+                                  icon: Icons.audiotrack,
+                                  label: 'Audio',
+                                ),
+                              ],
                             ],
                           ),
                           if (isDownloading) ...[
@@ -406,7 +485,7 @@ class _OfficialModelsList extends StatelessWidget {
                                 _ActionButton(
                                   label: 'USE',
                                   icon: Icons.play_arrow,
-                                  onTap: () => modelManager.selectModel(model.id),
+                                  onTap: () => _selectModel(context, model, modelManager),
                                 ),
                               if (isDownloaded)
                                 const SizedBox(width: 8),
@@ -415,7 +494,7 @@ class _OfficialModelsList extends StatelessWidget {
                                   label: 'DELETE',
                                   icon: Icons.delete,
                                   isDestructive: true,
-                                  onTap: () => modelManager.deleteModel(model.id),
+                                  onTap: () => _showDeleteConfirmation(context, model, modelManager),
                                 ),
                             ],
                           ),
@@ -437,6 +516,84 @@ class _ImportedModelsList extends StatelessWidget {
   final ModelManagerService modelManager;
   
   const _ImportedModelsList({required this.modelManager});
+  
+  Future<void> _selectModel(BuildContext context, GemmaModel model, ModelManagerService modelManager) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text('Initializing ${model.name}...'),
+            ),
+          ],
+        ),
+      ),
+    );
+    
+    final success = await modelManager.selectModel(model.id);
+    
+    if (context.mounted) {
+      Navigator.pop(context); // Close loading dialog
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${model.name} selected successfully'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to initialize ${model.name}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+  
+  Future<void> _showDeleteConfirmation(BuildContext context, GemmaModel model, ModelManagerService modelManager) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Model'),
+        content: Text('Are you sure you want to delete ${model.name}?\n\nThis action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirm == true) {
+      await modelManager.deleteModel(model.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${model.name} deleted'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
   
   @override
   Widget build(BuildContext context) {
@@ -562,13 +719,24 @@ class _ImportedModelsList extends StatelessWidget {
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              Text(
-                                model.formattedSize,
-                                style: TextStyle(
-                                  color: theme.onBackground.withValues(alpha: 0.5),
-                                  fontSize: 11,
-                                ),
+                              _InfoChip(
+                                icon: Icons.storage,
+                                label: model.formattedSize,
                               ),
+                              if (model.supportsImage) ...[
+                                const SizedBox(width: 8),
+                                _InfoChip(
+                                  icon: Icons.image,
+                                  label: 'Image',
+                                ),
+                              ],
+                              if (model.supportsAudio) ...[
+                                const SizedBox(width: 8),
+                                _InfoChip(
+                                  icon: Icons.audiotrack,
+                                  label: 'Audio',
+                                ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 12),
@@ -579,14 +747,14 @@ class _ImportedModelsList extends StatelessWidget {
                                 _ActionButton(
                                   label: 'USE',
                                   icon: Icons.play_arrow,
-                                  onTap: () => modelManager.selectModel(model.id),
+                                  onTap: () => _selectModel(context, model, modelManager),
                                 ),
                               const SizedBox(width: 8),
                               _ActionButton(
                                 label: 'DELETE',
                                 icon: Icons.delete,
                                 isDestructive: true,
-                                onTap: () => modelManager.deleteModel(model.id),
+                                onTap: () => _showDeleteConfirmation(context, model, modelManager),
                               ),
                             ],
                           ),
@@ -601,6 +769,55 @@ class _ImportedModelsList extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    final themeController = ThemeController.to;
+    
+    return Obx(() {
+      final theme = themeController.currentThemeConfig;
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: theme.surface.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: theme.onBackground.withValues(alpha: 0.1),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 12,
+              color: theme.onBackground.withValues(alpha: 0.5),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: theme.onBackground.withValues(alpha: 0.5),
+                fontSize: 11,
+                fontWeight: FontWeight.w300,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }
 

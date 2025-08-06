@@ -8,6 +8,7 @@ class ImagePickerService {
   /// Pick an image from gallery
   static Future<Uint8List?> pickImageFromGallery() async {
     try {
+      print('DEBUG: Starting to pick image from gallery');
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 1024,
@@ -16,11 +17,15 @@ class ImagePickerService {
       );
       
       if (image != null) {
-        return await image.readAsBytes();
+        final bytes = await image.readAsBytes();
+        print('DEBUG: Successfully picked image from gallery. Size: ${bytes.length} bytes');
+        return bytes;
+      } else {
+        print('DEBUG: No image selected from gallery');
+        return null;
       }
-      return null;
     } catch (e) {
-      print('Error picking image from gallery: $e');
+      print('ERROR: Error picking image from gallery: $e');
       return null;
     }
   }
@@ -28,6 +33,7 @@ class ImagePickerService {
   /// Take a photo with camera
   static Future<Uint8List?> takePhoto() async {
     try {
+      print('DEBUG: Starting to take photo with camera');
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
         maxWidth: 1024,
@@ -36,11 +42,15 @@ class ImagePickerService {
       );
       
       if (image != null) {
-        return await image.readAsBytes();
+        final bytes = await image.readAsBytes();
+        print('DEBUG: Successfully took photo with camera. Size: ${bytes.length} bytes');
+        return bytes;
+      } else {
+        print('DEBUG: Photo capture cancelled');
+        return null;
       }
-      return null;
     } catch (e) {
-      print('Error taking photo: $e');
+      print('ERROR: Error taking photo: $e');
       return null;
     }
   }
@@ -48,6 +58,7 @@ class ImagePickerService {
   /// Pick multiple images from gallery
   static Future<List<Uint8List>> pickMultipleImages({int maxImages = 5}) async {
     try {
+      print('DEBUG: Starting to pick multiple images from gallery (max: $maxImages)');
       final List<XFile> images = await _picker.pickMultiImage(
         maxWidth: 1024,
         maxHeight: 1024,
@@ -55,30 +66,37 @@ class ImagePickerService {
       );
       
       if (images.isEmpty) {
+        print('DEBUG: No images selected');
         return [];
       }
       
+      print('DEBUG: User selected ${images.length} images');
+      
       // Limit the number of images
       final selectedImages = images.take(maxImages).toList();
-      
-      final List<Uint8List> imageBytes = [];
-      for (final image in selectedImages) {
-        final bytes = await image.readAsBytes();
-        imageBytes.add(bytes);
+      if (images.length > maxImages) {
+        print('DEBUG: Limited to first $maxImages images');
       }
       
+      final List<Uint8List> imageBytes = [];
+      for (int i = 0; i < selectedImages.length; i++) {
+        final image = selectedImages[i];
+        final bytes = await image.readAsBytes();
+        imageBytes.add(bytes);
+        print('DEBUG: Processed image ${i + 1}/${selectedImages.length}, size: ${bytes.length} bytes');
+      }
+      
+      print('DEBUG: Successfully processed ${imageBytes.length} images');
       return imageBytes;
     } catch (e) {
-      print('Error picking multiple images: $e');
+      print('ERROR: Error picking multiple images: $e');
       return [];
     }
   }
 
   /// Show dialog to choose image source
   static Future<List<Uint8List>> showImageSourceDialog(BuildContext context) async {
-    final List<Uint8List> selectedImages = [];
-    
-    await showModalBottomSheet<void>(
+    final List<Uint8List>? selectedImages = await showModalBottomSheet<List<Uint8List>>(
       context: context,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
@@ -114,9 +132,10 @@ class ImagePickerService {
                     ),
                   ),
                   onTap: () async {
-                    Navigator.pop(context);
+                    print('DEBUG: User chose gallery from image source dialog');
                     final images = await pickMultipleImages();
-                    selectedImages.addAll(images);
+                    print('DEBUG: Picked ${images.length} images from gallery, returning them');
+                    Navigator.pop(context, images); // Return the images
                   },
                 ),
                 ListTile(
@@ -132,10 +151,14 @@ class ImagePickerService {
                     ),
                   ),
                   onTap: () async {
-                    Navigator.pop(context);
+                    print('DEBUG: User chose camera from image source dialog');
                     final image = await takePhoto();
                     if (image != null) {
-                      selectedImages.add(image);
+                      print('DEBUG: Took photo with camera, returning it');
+                      Navigator.pop(context, [image]); // Return the single image in a list
+                    } else {
+                      print('DEBUG: No photo taken from camera');
+                      Navigator.pop(context, <Uint8List>[]); // Return empty list
                     }
                   },
                 ),
@@ -147,6 +170,6 @@ class ImagePickerService {
       },
     );
     
-    return selectedImages;
+    return selectedImages ?? [];
   }
 }
